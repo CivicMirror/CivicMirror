@@ -71,6 +71,31 @@ jobs:
           image: ${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}
           region: ${{ env.GCP_REGION }}
 
+      - name: Run database migrations
+        run: |
+          gcloud run jobs create civicmirror-migrate \
+            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --service-account "cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --set-cloudsql-instances "civicmirror-2026:us-central1:civicmirror-db" \
+            --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.prod" \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest" \
+            --command "python" \
+            --args "manage.py,migrate,--noinput" \
+            --max-retries 0 \
+            --vpc-connector "projects/${{ env.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/civicmirror-connector" \
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --quiet || true
+          gcloud run jobs update civicmirror-migrate \
+            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --quiet || true
+          gcloud run jobs execute civicmirror-migrate \
+            --region "${{ env.GCP_REGION }}" \
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --wait
+
       # ── Frontend ─────────────────────────────────────────────────────────────
       - name: Build & push frontend image
         uses: docker/build-push-action@v6

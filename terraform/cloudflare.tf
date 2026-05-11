@@ -12,7 +12,7 @@ resource "cloudflare_record" "backend_api" {
   name    = "api.civicmirror"
   content = "ghs.googlehosted.com"
   type    = "CNAME"
-  proxied = true
+  proxied = false  # switch to true after GCP managed cert shows Active
   ttl     = 1
   comment = "CivicMirror API → Cloud Run backend — managed by Terraform"
 }
@@ -22,7 +22,7 @@ resource "cloudflare_record" "frontend_app" {
   name    = "civicmirror"
   content = "ghs.googlehosted.com"
   type    = "CNAME"
-  proxied = true
+  proxied = false  # switch to true after GCP managed cert shows Active
   ttl     = 1
   comment = "CivicMirror App → Cloud Run frontend — managed by Terraform"
 }
