@@ -1,14 +1,16 @@
 import { Box, LinearProgress, Stack, Typography } from '@mui/material';
-import type { MockTallyEntry } from '../../types';
+import type { TallyOption } from '../../types';
 import { formatPercent } from '../../utils/format';
 
 interface TallyBarsProps {
-  entries: MockTallyEntry[];
+  options: TallyOption[];
+  totalVotes: number;
   compact?: boolean;
+  showTotal?: boolean;
 }
 
-function TallyBars({ entries, compact = false }: TallyBarsProps) {
-  if (!entries.length) {
+function TallyBars({ options, totalVotes, compact = false, showTotal = true }: TallyBarsProps) {
+  if (!options.length) {
     return (
       <Typography color="text.secondary" variant="body2">
         Mock tally data will appear here once people begin casting votes.
@@ -18,33 +20,38 @@ function TallyBars({ entries, compact = false }: TallyBarsProps) {
 
   return (
     <Stack spacing={compact ? 1 : 1.5}>
-      {entries.map((entry) => (
-        <Stack key={entry.id} spacing={0.5}>
-          <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
-            <Typography fontWeight={entry.is_leading ? 700 : 500} variant={compact ? 'body2' : 'body1'}>
-              {entry.label}
-              {entry.party ? (
-                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, ml: 0.75 }}>
-                  {entry.party}
-                </Box>
-              ) : null}
-            </Typography>
-            <Typography color="text.secondary" variant="caption">
-              {formatPercent(entry.percentage ?? 0)}
-            </Typography>
+      {options.map((option, index) => {
+        const isLeading = index === 0;
+        return (
+          <Stack key={`${option.type}-${option.id}`} spacing={0.75}>
+            <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
+              <Typography fontWeight={isLeading ? 700 : 500} variant={compact ? 'body2' : 'body1'}>
+                {option.label}
+              </Typography>
+              <Typography color="text.secondary" variant={compact ? 'caption' : 'body2'}>
+                {option.count} · {formatPercent(option.percent)}
+              </Typography>
+            </Stack>
+            <Box>
+              <LinearProgress
+                color={isLeading ? 'primary' : 'secondary'}
+                sx={{
+                  borderRadius: 999,
+                  height: compact ? 8 : 10,
+                  opacity: isLeading ? 1 : 0.82,
+                }}
+                value={option.percent}
+                variant="determinate"
+              />
+            </Box>
           </Stack>
-          <LinearProgress
-            color={entry.is_leading ? 'primary' : 'secondary'}
-            sx={{
-              borderRadius: 999,
-              height: compact ? 8 : 10,
-              opacity: entry.is_leading ? 1 : 0.8,
-            }}
-            value={entry.percentage ?? 0}
-            variant="determinate"
-          />
-        </Stack>
-      ))}
+        );
+      })}
+      {showTotal ? (
+        <Typography color="text.secondary" variant={compact ? 'caption' : 'body2'}>
+          {totalVotes} mock votes cast
+        </Typography>
+      ) : null}
     </Stack>
   );
 }

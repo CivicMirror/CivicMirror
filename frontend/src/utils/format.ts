@@ -1,4 +1,4 @@
-import type { MockTallyEntry, Race } from '../types';
+import type { MockTallyEntry, Race, TallyOption, TallyResponse } from '../types';
 import { STATE_NAME_BY_CODE } from './usStates';
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -135,4 +135,32 @@ export const buildRaceTallyEntries = (race: Race, limit?: number): MockTallyEntr
   }));
 
   return limit ? withLeaders.slice(0, limit) : withLeaders;
+};
+
+export const buildTallyOptions = (
+  entries: MockTallyEntry[],
+  type: TallyOption['type'],
+  limit?: number,
+): TallyOption[] => {
+  const limitedEntries = limit ? entries.slice(0, limit) : entries;
+
+  return limitedEntries.map((entry, index) => ({
+    id: typeof entry.id === 'number' ? entry.id : Number(entry.id) || index + 1,
+    label: entry.label,
+    type,
+    count: entry.votes,
+    percent: normalizePercentage(entry.percentage) ?? 0,
+  }));
+};
+
+export const buildRaceTallyResponse = (race: Race, limit?: number): TallyResponse => {
+  const entries = buildRaceTallyEntries(race, limit);
+  const totalVotes = race.mock_vote_count || entries.reduce((sum, entry) => sum + entry.votes, 0);
+
+  return {
+    race_id: race.id,
+    total_votes: totalVotes,
+    options: buildTallyOptions(entries, race.race_type === 'candidate' ? 'candidate' : 'measure_option'),
+    breakdowns: {},
+  };
 };

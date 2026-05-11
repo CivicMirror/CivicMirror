@@ -24,12 +24,21 @@ export interface Election {
   status: string;
 }
 
+export interface VoteChoice {
+  type: 'candidate' | 'measure_option' | string;
+  id: number;
+  label: string;
+}
+
 export interface Candidate {
   id: number;
   name: string;
   party: string;
   incumbent: boolean;
-  candidate_status: string;
+  candidate_status: 'running' | 'withdrawn' | 'disqualified' | 'write_in' | string;
+  description?: string;
+  image_url?: string;
+  website_url?: string;
 }
 
 export interface MeasureOption {
@@ -46,6 +55,21 @@ export interface MockTallyEntry {
   is_leading?: boolean;
 }
 
+export interface TallyOption {
+  id: number;
+  label: string;
+  type: 'candidate' | 'measure_option';
+  count: number;
+  percent: number;
+}
+
+export interface TallyResponse {
+  race_id: number;
+  total_votes: number;
+  options: TallyOption[];
+  breakdowns: Record<string, Record<string, number>>;
+}
+
 export interface Race {
   id: number;
   election: Election;
@@ -56,6 +80,8 @@ export interface Race {
   certification_status: string;
   race_status: string;
   source: 'civic_api' | 'community';
+  vote_method?: 'single_choice' | 'multi_seat' | 'ranked_choice' | 'yes_no' | string;
+  max_selections?: number;
   candidates?: Candidate[];
   measure_options?: MeasureOption[];
   mock_tally?: MockTallyEntry[];
@@ -63,6 +89,7 @@ export interface Race {
   voting_opens?: string;
   voting_closes?: string;
   viewer_has_voted?: boolean;
+  viewer_choice?: VoteChoice;
 }
 
 export interface PaginatedResponse<T> {
@@ -114,4 +141,80 @@ export interface ProfileUpdatePayload {
 export interface VotePayload {
   candidate_id?: number;
   measure_option_id?: number;
+}
+
+export interface VoteResponse {
+  id: number;
+  race_id: number;
+  cast_at: string;
+  choice: VoteChoice;
+}
+
+export interface MyVote {
+  id: number;
+  race_id: number;
+  election_name: string;
+  office_title: string;
+  jurisdiction: string;
+  cast_at: string;
+  choice: VoteChoice;
+  race_status: string;
+}
+
+export type VoteErrorCode =
+  | 'not_authenticated'
+  | 'race_inactive'
+  | 'voting_closed'
+  | 'invalid_option'
+  | 'already_voted';
+
+export interface VoteErrorResponse {
+  code: VoteErrorCode;
+  detail: string;
+}
+
+export interface CommunityRaceCandidateInput {
+  name: string;
+  party?: string;
+  description?: string;
+  image_url?: string;
+  website_url?: string;
+  candidate_type: 'running' | 'write_in';
+}
+
+export interface CommunityCandidateRacePayload {
+  race_type: 'candidate';
+  office_title: string;
+  jurisdiction: 'city' | 'town' | 'county' | 'district';
+  election_date: string;
+  location_name: string;
+  candidates: CommunityRaceCandidateInput[];
+}
+
+export interface CommunityMeasureRacePayload {
+  race_type: 'measure';
+  ballot_type: 'Citizen-Initiated' | 'Town-Initiated';
+  question_title: string;
+  election_date: string;
+  location_name: string;
+  yes_vote_details: string;
+  no_vote_details: string;
+  source_links: string[];
+}
+
+export type CommunityRacePayload = CommunityCandidateRacePayload | CommunityMeasureRacePayload;
+
+export interface ConflictRace {
+  id: number;
+  office_title: string;
+  jurisdiction: string;
+  election_date?: string;
+  election_name?: string;
+  location_name?: string;
+}
+
+export interface ConflictResponse {
+  conflict: true;
+  detail?: string;
+  conflicts: ConflictRace[];
 }

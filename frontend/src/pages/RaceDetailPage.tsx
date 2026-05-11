@@ -1,5 +1,4 @@
 import ArrowBack from '@mui/icons-material/ArrowBack';
-import Ballot from '@mui/icons-material/Ballot';
 import {
   Alert,
   Box,
@@ -7,24 +6,37 @@ import {
   Card,
   CardContent,
   Chip,
-  Divider,
   Stack,
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
-import { raceApi } from '../api/elections';
 import { getApiErrorMessage } from '../api/client';
+import { raceApi } from '../api/elections';
+import { votingApi } from '../api/voting';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import AlreadyVotedPanel from '../components/races/AlreadyVotedPanel';
+import BallotCard from '../components/races/BallotCard';
 import StatusChip from '../components/races/StatusChip';
 import TallyBars from '../components/races/TallyBars';
-import type { Race } from '../types';
-import { buildRaceTallyEntries, formatCompactNumber, formatDate, formatDateTime, formatRaceSource } from '../utils/format';
+import { useAuth } from '../hooks/useAuth';
+import type { Race, TallyResponse, VoteChoice, VoteResponse } from '../types';
+import {
+  buildRaceTallyResponse,
+  formatCompactNumber,
+  formatDate,
+  formatDateTime,
+  formatRaceSource,
+  getRaceDisplayStatus,
+} from '../utils/format';
 
 function RaceDetailPage() {
   const { id } = useParams();
+  const { isAuthenticated } = useAuth();
   const [race, setRace] = useState<Race | null>(null);
+  const [tally, setTally] = useState<TallyResponse | null>(null);
+  const [recordedChoice, setRecordedChoice] = useState<VoteChoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,11 +52,28 @@ function RaceDetailPage() {
     setLoading(true);
     setError(null);
 
-    void raceApi
-      .detail(raceId)
-      .then((response) => {
-        if (isActive) {
-          setRace(response);
+    void Promise.all([raceApi.detail(raceId), votingApi.getRaceTally(raceId)])
+      .then(([raceResponse, tallyResponse]) => {
+        if (!isActive) {
+          return;
+        }
+
+        setRace(raceResponse);
+        setTally(tallyResponse);
+        setRecordedChoice(raceResponse.viewer_choice ?? null);
+
+        if (isAuthenticated && raceResponse.viewer_has_voted && !raceResponse.viewer_choice) {
+          void votingApi
+            .getMyVotes()
+            .then((votes) => {
+              if (!isActive) {
+                return;
+              }
+
+              const matchingVote = votes.find((vote) => vote.race_id === raceResponse.id);
+              setRecordedChoice(matchingVote?.choice ?? null);
+            })
+            .catch(() => undefined);
         }
       })
       .catch((requestError) => {
@@ -61,7 +90,7 @@ function RaceDetailPage() {
     return () => {
       isActive = false;
     };
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   if (loading) {
     return <LoadingSpinner message="Loading race details…" />;
@@ -80,7 +109,37 @@ function RaceDetailPage() {
     );
   }
 
-  const tallyEntries = buildRaceTallyEntries(race);
+  const tallySnapshot = tally ?? buildRaceTallyResponse(race);
+  const raceDisplayStatus = getRaceDisplayStatus(race);
+  const hasVoted = Boolean(race.viewer_has_voted || recordedChoice);
+  const canVote = isAuthenticated && !hasVoted && raceDisplayStatus === 'active' && race.race_status === 'active';
+  const votePrompt =
+    !isAuthenticated
+      ? null
+      : raceDisplayStatus === 'results_pending' ||
+          raceDisplayStatus === 'results_certified' ||
+          raceDisplayStatus === 'archived'
+        ? 'Voting is closed for this race, but the public tally remains visible.'
+        : 'This race is not currently accepting votes.';
+
+  const handleVoteSuccess = (_vote: VoteResponse, choice: VoteChoice) => {
+    setRecordedChoice(choice);
+    setRace((currentRace) =>
+      currentRace
+        ? {
+            ...currentRace,
+            viewer_has_voted: true,
+            viewer_choice: choice,
+            mock_vote_count: currentRace.mock_vote_count + 1,
+          }
+        : currentRace,
+    );
+
+    void votingApi
+      .getRaceTally(race.id)
+      .then((nextTally) => setTally(nextTally))
+      .catch(() => undefined);
+  };
 
   return (
     <Stack spacing={3}>
@@ -112,66 +171,50 @@ function RaceDetailPage() {
 
             <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
               <Alert severity="info" sx={{ flex: 1 }}>
-                {formatCompactNumber(race.mock_vote_count)} mock votes cast so far.
+                {formatCompactNumber(tallySnapshot.total_votes)} mock votes cast so far.
               </Alert>
-              <Alert severity="success" sx={{ flex: 1 }}>
+              <Alert severity={raceDisplayStatus === 'active' ? 'success' : 'warning'} sx={{ flex: 1 }}>
                 Voting window: {formatDateTime(race.voting_opens)} → {formatDateTime(race.voting_closes)}
               </Alert>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={2}>
-              <Typography variant="h5">Mock tally snapshot</Typography>
-              <TallyBars entries={tallyEntries} />
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={2}>
-              <Typography variant="h5">
-                {race.race_type === 'candidate' ? 'Candidates' : 'Measure options'}
-              </Typography>
-              <Stack spacing={1.5}>
-                {tallyEntries.map((entry) => (
-                  <Card key={entry.id} variant="outlined">
-                    <CardContent sx={{ py: 2.5 }}>
-                      <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={2}>
-                        <Box>
-                          <Typography fontWeight={700}>{entry.label}</Typography>
-                          {entry.party ? (
-                            <Typography color="text.secondary" variant="body2">
-                              {entry.party}
-                            </Typography>
-                          ) : null}
-                        </Box>
-                        <Typography color="text.secondary" variant="body2">
-                          {entry.votes} votes · {Math.round((entry.percentage ?? 0) * 10) / 10}%
-                        </Typography>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Stack>
             </Stack>
           </Stack>
         </CardContent>
       </Card>
 
+      {hasVoted ? (
+        <AlreadyVotedPanel choice={recordedChoice ?? race.viewer_choice ?? null} />
+      ) : canVote ? (
+        <BallotCard onVoteSuccess={handleVoteSuccess} race={race} tally={tallySnapshot} />
+      ) : !isAuthenticated ? (
+        <Card>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Stack spacing={2.5}>
+              <Typography variant="h5">Cast a mock vote</Typography>
+              <Alert severity="info">Register or log in to cast a mock vote.</Alert>
+              <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
+                <Button component={RouterLink} to="/register" variant="contained">
+                  Register
+                </Button>
+                <Button component={RouterLink} to="/login" variant="outlined">
+                  Log in
+                </Button>
+              </Stack>
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Alert severity="info">{votePrompt}</Alert>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent sx={{ p: { xs: 3, md: 4 } }}>
           <Stack spacing={2}>
-            <Stack alignItems="center" direction="row" gap={1}>
-              <Ballot color="primary" />
-              <Typography variant="h5">Cast Your Mock Vote</Typography>
-            </Stack>
-            <Typography color="text.secondary">
-              Phase 5 will hook the live mock-voting experience into this page. The results and race
-              details above are already public and ready for comparison once voting launches.
-            </Typography>
-            <Button disabled variant="contained">
-              Voting opens in Phase 5
-            </Button>
+            <Typography variant="h5">Public mock tally</Typography>
+            <TallyBars options={tallySnapshot.options} totalVotes={tallySnapshot.total_votes} />
           </Stack>
         </CardContent>
       </Card>

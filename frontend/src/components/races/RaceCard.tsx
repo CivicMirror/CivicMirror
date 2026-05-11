@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { Race } from '../../types';
-import { buildRaceTallyEntries, formatCompactNumber, formatRaceSource } from '../../utils/format';
+import { buildRaceTallyEntries, buildTallyOptions, formatCompactNumber, formatRaceSource } from '../../utils/format';
 import StatusChip from './StatusChip';
 import TallyBars from './TallyBars';
 
@@ -21,9 +21,13 @@ interface RaceCardProps {
 }
 
 function RaceCard({ race }: RaceCardProps) {
-  const tallyEntries = buildRaceTallyEntries(race, 3);
+  const tallyEntries = buildRaceTallyEntries(race);
   const previewEntries = tallyEntries.slice(0, 3);
-  const hiddenCount = Math.max(0, buildRaceTallyEntries(race).length - previewEntries.length);
+  const previewOptions = buildTallyOptions(
+    previewEntries,
+    race.race_type === 'candidate' ? 'candidate' : 'measure_option',
+  );
+  const hiddenCount = Math.max(0, tallyEntries.length - previewEntries.length);
 
   return (
     <Card sx={{ height: '100%' }}>
@@ -54,7 +58,7 @@ function RaceCard({ race }: RaceCardProps) {
             {hiddenCount > 0 ? <Chip label={`+${hiddenCount} more`} /> : null}
           </Stack>
 
-          <TallyBars compact entries={previewEntries} />
+          <TallyBars compact options={previewOptions} showTotal={false} totalVotes={race.mock_vote_count} />
 
           <Divider />
 

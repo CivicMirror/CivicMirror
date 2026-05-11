@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
   MenuItem,
   Stack,
   TextField,
@@ -17,10 +18,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, getApiFieldErrors } from '../api/client';
+import { votingApi } from '../api/voting';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useAuth } from '../hooks/useAuth';
-import { formatDate } from '../utils/format';
+import type { MyVote } from '../types';
+import { formatDate, formatDateTime } from '../utils/format';
 import { US_STATES } from '../utils/usStates';
 
 const profileSchema = z.object({
@@ -40,6 +43,9 @@ function ProfilePage() {
   const [loading, setLoading] = useState(!profile);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [votes, setVotes] = useState<MyVote[]>([]);
+  const [votesLoading, setVotesLoading] = useState(true);
+  const [votesError, setVotesError] = useState<string | null>(null);
 
   const {
     register,
@@ -89,6 +95,34 @@ function ProfilePage() {
         setLoading(false);
       });
   }, [profile, reset, setProfile]);
+
+  useEffect(() => {
+    let isActive = true;
+    setVotesLoading(true);
+    setVotesError(null);
+
+    void votingApi
+      .getMyVotes()
+      .then((response) => {
+        if (isActive) {
+          setVotes(response);
+        }
+      })
+      .catch((requestError) => {
+        if (isActive) {
+          setVotesError(getApiErrorMessage(requestError, 'We could not load your mock vote history.'));
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setVotesLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -213,6 +247,46 @@ function ProfilePage() {
                 Save profile
               </Button>
             </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography gutterBottom variant="h5">
+                My Votes
+              </Typography>
+              <Typography color="text.secondary">
+                Review the mock votes you have already cast across CivicMirror races.
+              </Typography>
+            </Box>
+
+            {votesError ? <Alert severity="error">{votesError}</Alert> : null}
+
+            {votesLoading ? (
+              <LoadingSpinner message="Loading your mock vote history…" />
+            ) : votes.length === 0 ? (
+              <Typography color="text.secondary">You haven't cast any mock votes yet.</Typography>
+            ) : (
+              <Stack divider={<Divider flexItem />} spacing={2}>
+                {votes.map((vote) => (
+                  <Stack key={vote.id} spacing={0.75}>
+                    <Typography fontWeight={700} variant="h6">
+                      {vote.office_title}
+                    </Typography>
+                    <Typography color="text.secondary" variant="body2">
+                      {vote.election_name} · {vote.jurisdiction}
+                    </Typography>
+                    <Typography variant="body1">Your choice: {vote.choice.label}</Typography>
+                    <Typography color="text.secondary" variant="body2">
+                      Cast {formatDateTime(vote.cast_at)} · Race status: {vote.race_status}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
           </Stack>
         </CardContent>
       </Card>
