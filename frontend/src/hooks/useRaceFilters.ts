@@ -51,7 +51,10 @@ export const useRaceFilters = () => {
       f.setState(stateParam);
     }
 
-    if (!stateParam && f.state && scopeParam === 'national') {
+    // Clear a location field when the URL no longer carries it for that scope.
+    // Using scope !== 'state' (not === 'national') catches all scope switches,
+    // e.g. state→zip still clears the stale state value from the store.
+    if (!stateParam && f.state && scopeParam !== 'state') {
       f.setState(null);
     }
 
@@ -59,7 +62,7 @@ export const useRaceFilters = () => {
       f.setZip(zipParam);
     }
 
-    if (!zipParam && f.zip && scopeParam === 'national') {
+    if (!zipParam && f.zip && scopeParam !== 'zip') {
       f.setZip(null);
     }
 
@@ -67,13 +70,16 @@ export const useRaceFilters = () => {
       f.setAddress(addressParam);
     }
 
-    if (!addressParam && f.address && scopeParam === 'national') {
+    if (!addressParam && f.address && scopeParam !== 'address') {
       f.setAddress(null);
     }
 
     const rawElectionId = searchParams.get('electionId');
-    const parsed = rawElectionId !== null ? Number(rawElectionId) : null;
-    const nextElectionId = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+    // Guard against empty string ("") which Number() coerces to 0 — an invalid
+    // Django AutoField PK — and against non-numeric strings which produce NaN.
+    const parsed =
+      rawElectionId !== null && rawElectionId !== '' ? Number(rawElectionId) : null;
+    const nextElectionId = parsed !== null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
     if (nextElectionId !== f.electionId) {
       f.setElectionId(nextElectionId);
     }
