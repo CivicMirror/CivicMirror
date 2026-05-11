@@ -12,8 +12,8 @@ resource "cloudflare_record" "backend_api" {
   name    = "api.civicmirror"
   content = "ghs.googlehosted.com"
   type    = "CNAME"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 60
   comment = "CivicMirror API → Cloud Run backend — managed by Terraform"
 }
 
