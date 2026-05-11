@@ -13,6 +13,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import type { Race } from '../../types';
 import { buildRaceTallyEntries, buildTallyOptions, formatCompactNumber, formatRaceSource } from '../../utils/format';
+import CertificationBadge from './CertificationBadge';
 import StatusChip from './StatusChip';
 import TallyBars from './TallyBars';
 
@@ -35,7 +36,12 @@ function RaceCard({ race }: RaceCardProps) {
         <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.25, height: '100%' }}>
           <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="space-between">
             <Chip label={formatRaceSource(race.source)} size="small" variant="filled" />
-            <StatusChip {...race} />
+            <Stack alignItems="flex-end" gap={1}>
+              <StatusChip race_status={race.race_status} />
+              {race.certification_status !== 'upcoming' ? (
+                <CertificationBadge status={race.certification_status} />
+              ) : null}
+            </Stack>
           </Stack>
 
           <Box>

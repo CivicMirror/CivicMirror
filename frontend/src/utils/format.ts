@@ -25,6 +25,9 @@ export type DisplayStatusKey =
   | 'active'
   | 'results_pending'
   | 'results_certified'
+  | 'partial_results'
+  | 'pending_review'
+  | 'cancelled'
   | 'archived';
 
 const normalizePercentage = (value?: number): number | undefined => {
@@ -72,11 +75,23 @@ export const formatRaceSource = (source: Race['source']) =>
 export const getRaceDisplayStatus = (
   race: Pick<Race, 'certification_status' | 'race_status' | 'voting_opens' | 'voting_closes'>,
 ): DisplayStatusKey => {
+  if (race.race_status === 'cancelled') {
+    return 'cancelled';
+  }
+
+  if (race.race_status === 'pending_review' || race.race_status === 'draft') {
+    return 'pending_review';
+  }
+
   if (race.certification_status === 'results_certified') {
     return 'results_certified';
   }
 
-  if (race.race_status === 'archived' || race.certification_status === 'archived') {
+  if (race.certification_status === 'partial_results') {
+    return 'partial_results';
+  }
+
+  if (race.race_status === 'archived') {
     return 'archived';
   }
 

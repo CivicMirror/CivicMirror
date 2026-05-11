@@ -2,6 +2,8 @@ import type {
   Candidate,
   MeasureOption,
   MockTallyEntry,
+  OfficialResultRow,
+  OfficialResultsResponse,
   PaginatedResponse,
   Race,
   RaceListParams,
@@ -16,6 +18,19 @@ interface RawRace extends Omit<Race, 'candidates' | 'measure_options' | 'mock_ta
   mock_tally?: MockTallyEntry[];
   tally?: MockTallyEntry[];
   mock_results?: MockTallyEntry[];
+}
+
+interface RawOfficialResultRow extends Omit<OfficialResultRow, 'option_label' | 'round_number' | 'is_write_in_aggregate' | 'jurisdiction_fragment'> {
+  option_label?: string | null;
+  measure_option_label?: string | null;
+  round_number?: number | null;
+  is_write_in_aggregate?: boolean;
+  jurisdiction_fragment?: string;
+}
+
+interface RawOfficialResultsResponse extends Omit<OfficialResultsResponse, 'results' | 'source_url'> {
+  source_url?: string;
+  results: RawOfficialResultRow[];
 }
 
 const normalizeRace = (race: RawRace): Race => ({
@@ -57,3 +72,19 @@ export const raceApi = {
     return this.list({ scope: 'address', address, electionId: electionId ?? null });
   },
 };
+
+export async function getRaceOfficialResults(raceId: number): Promise<OfficialResultsResponse> {
+  const { data } = await apiClient.get<RawOfficialResultsResponse>(`/api/races/${raceId}/official-results/`);
+
+  return {
+    ...data,
+    source_url: data.source_url ?? data.results[0]?.source_url ?? '',
+    results: data.results.map((row) => ({
+      ...row,
+      option_label: row.option_label ?? row.measure_option_label ?? null,
+      round_number: row.round_number ?? null,
+      is_write_in_aggregate: row.is_write_in_aggregate ?? false,
+      jurisdiction_fragment: row.jurisdiction_fragment ?? '',
+    })),
+  };
+}
