@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import { formatStateName } from '../utils/format';
@@ -10,6 +10,15 @@ export const useRaceFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useRaceFiltersStore();
 
+  // Refs let us read the latest values inside effects without listing them as
+  // reactive deps — this breaks the URL↔store feedback loop.
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  const setSearchParamsRef = useRef(setSearchParams);
+  setSearchParamsRef.current = setSearchParams;
+
   const isAutoDetected =
     filters.scope === 'national' &&
     !filters.state &&
@@ -20,51 +29,59 @@ export const useRaceFilters = () => {
   const resolvedScope = isAutoDetected ? 'state' : filters.scope;
   const effectiveState = resolvedScope === 'state' ? filters.state ?? filters.detectedState : null;
 
+  // URL → Store: only re-runs when the URL changes, reads store via ref.
+  // This prevents the store setter from immediately re-triggering this effect
+  // and reverting a user action that hasn't been reflected in the URL yet.
   useEffect(() => {
     if (!searchParams.toString()) {
       return;
     }
 
+    const f = filtersRef.current;
     const scopeParam = searchParams.get('scope');
     const stateParam = searchParams.get('state')?.toUpperCase() ?? null;
     const zipParam = searchParams.get('zip');
     const addressParam = searchParams.get('address');
-    const electionIdParam = searchParams.get('electionId');
 
-    if (scopeParam && VALID_SCOPES.has(scopeParam) && scopeParam !== filters.scope) {
-      filters.setScope(scopeParam as typeof filters.scope);
+    if (scopeParam && VALID_SCOPES.has(scopeParam) && scopeParam !== f.scope) {
+      f.setScope(scopeParam as typeof f.scope);
     }
 
-    if (stateParam && isStateCode(stateParam) && stateParam !== filters.state) {
-      filters.setState(stateParam);
+    if (stateParam && isStateCode(stateParam) && stateParam !== f.state) {
+      f.setState(stateParam);
     }
 
-    if (!stateParam && filters.state && scopeParam === 'national') {
-      filters.setState(null);
+    if (!stateParam && f.state && scopeParam === 'national') {
+      f.setState(null);
     }
 
-    if (zipParam && zipParam !== filters.zip) {
-      filters.setZip(zipParam);
+    if (zipParam && zipParam !== f.zip) {
+      f.setZip(zipParam);
     }
 
-    if (!zipParam && filters.zip && scopeParam === 'national') {
-      filters.setZip(null);
+    if (!zipParam && f.zip && scopeParam === 'national') {
+      f.setZip(null);
     }
 
-    if (addressParam && addressParam !== filters.address) {
-      filters.setAddress(addressParam);
+    if (addressParam && addressParam !== f.address) {
+      f.setAddress(addressParam);
     }
 
-    if (!addressParam && filters.address && scopeParam === 'national') {
-      filters.setAddress(null);
+    if (!addressParam && f.address && scopeParam === 'national') {
+      f.setAddress(null);
     }
 
-    const parsedElectionId = electionIdParam ? Number(electionIdParam) : null;
-    if (parsedElectionId !== filters.electionId) {
-      filters.setElectionId(Number.isFinite(parsedElectionId) ? parsedElectionId : null);
+    const rawElectionId = searchParams.get('electionId');
+    const parsed = rawElectionId !== null ? Number(rawElectionId) : null;
+    const nextElectionId = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+    if (nextElectionId !== f.electionId) {
+      f.setElectionId(nextElectionId);
     }
-  }, [filters, searchParams]);
+  }, [searchParams]); // only URL changes drive URL→Store sync
 
+  // Store → URL: only re-runs when store fields change, reads URL via ref.
+  // Removing searchParams and setSearchParams from deps prevents URL changes
+  // (including the ones this effect causes) from re-triggering it.
   useEffect(() => {
     const next = new URLSearchParams();
 
@@ -84,14 +101,14 @@ export const useRaceFilters = () => {
       next.set('address', filters.address);
     }
 
-    if (filters.electionId) {
+    if (filters.electionId != null) {
       next.set('electionId', String(filters.electionId));
     }
 
-    if (next.toString() !== searchParams.toString()) {
-      setSearchParams(next, { replace: true });
+    if (next.toString() !== searchParamsRef.current.toString()) {
+      setSearchParamsRef.current(next, { replace: true });
     }
-  }, [filters.address, filters.electionId, filters.scope, filters.state, filters.zip, searchParams, setSearchParams]);
+  }, [filters.address, filters.electionId, filters.scope, filters.state, filters.zip]); // only store changes drive Store→URL sync
 
   const activeLocationLabel = useMemo(() => {
     if (resolvedScope === 'state' && effectiveState) {

@@ -182,6 +182,12 @@ function LocationBar({
                   setZipInput(event.target.value.replace(/[^0-9]/g, ''));
                   setZipError(null);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleZipSubmit();
+                  }
+                }}
                 value={zipInput}
               />
               <Button onClick={handleZipSubmit} sx={{ minWidth: 120 }} variant="contained">
@@ -203,6 +209,12 @@ function LocationBar({
                 onChange={(event) => {
                   setAddressInput(event.target.value);
                   setAddressError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleAddressSubmit();
+                  }
                 }}
                 placeholder="1600 Pennsylvania Ave NW, Washington, DC"
                 value={addressInput}
