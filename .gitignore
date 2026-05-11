@@ -1,5 +1,8 @@
 # Secrets — never commit
 docs/Secrets/
+
+# Local dev reference (not for repo)
+docs/dev-commands.md
 backend/.env
 backend/.venv/
 backend/db.sqlite3
