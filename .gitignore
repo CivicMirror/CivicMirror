@@ -1,2 +1,9 @@
 # Secrets — never commit
 docs/Secrets/
+backend/.env
+backend/.venv/
+backend/db.sqlite3
+backend/staticfiles/
+**/__pycache__/
+*.pyc
+.pytest_cache/

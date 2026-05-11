@@ -1,0 +1,12 @@
+Django>=4.2,<5.0
+djangorestframework
+django-rest-knox
+django-environ
+django-cors-headers
+drf-spectacular
+celery[redis]
+redis
+requests
+gunicorn
+psycopg2-binary
+django-filter
