@@ -4,25 +4,31 @@ from .models import OfficialResult
 
 
 class OfficialResultSerializer(serializers.ModelSerializer):
-    candidate_name = serializers.CharField(source='candidate.name', read_only=True)
-    measure_option_label = serializers.CharField(source='measure_option.option_label', read_only=True)
-    race_title = serializers.CharField(source='race.office_title', read_only=True)
+    candidate_name = serializers.SerializerMethodField()
+    option_label = serializers.SerializerMethodField()
+    vote_pct = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, coerce_to_string=False)
+
+    def get_candidate_name(self, obj):
+        if obj.is_write_in_aggregate:
+            return 'Write-in (aggregate)'
+        return obj.candidate.name if obj.candidate else None
+
+    def get_option_label(self, obj):
+        return obj.measure_option.option_label if obj.measure_option else None
 
     class Meta:
         model = OfficialResult
-        fields = (
+        fields = [
             'id',
-            'race',
-            'race_title',
-            'candidate',
             'candidate_name',
-            'measure_option',
-            'measure_option_label',
+            'option_label',
             'vote_count',
             'vote_pct',
+            'is_winner',
+            'result_type',
             'certified_at',
             'source_url',
-            'result_type',
-            'is_winner',
-            'raw_payload',
-        )
+            'round_number',
+            'is_write_in_aggregate',
+            'jurisdiction_fragment',
+        ]

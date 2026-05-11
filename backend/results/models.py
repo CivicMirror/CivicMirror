@@ -16,18 +16,24 @@ class OfficialResult(models.Model):
     source_url = models.URLField(blank=True)
     result_type = models.CharField(max_length=20, default=ResultType.UNOFFICIAL, choices=ResultType.choices)
     is_winner = models.BooleanField(null=True, blank=True)
+    round_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    jurisdiction_fragment = models.CharField(max_length=255, blank=True)
+    is_write_in_aggregate = models.BooleanField(default=False)
     raw_payload = models.JSONField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=['race'])]
+        indexes = [models.Index(fields=['race', 'round_number'])]
         constraints = [
             models.CheckConstraint(
-                check=(Q(candidate__isnull=False) & Q(measure_option__isnull=True))
-                | (Q(candidate__isnull=True) & Q(measure_option__isnull=False)),
-                name='exactly_one_result_target',
+                check=(
+                    Q(is_write_in_aggregate=True)
+                    | (Q(candidate__isnull=False) & Q(measure_option__isnull=True))
+                    | (Q(candidate__isnull=True) & Q(measure_option__isnull=False))
+                ),
+                name='result_target_valid',
             )
         ]
-        ordering = ['-vote_count', 'id']
+        ordering = ['round_number', '-vote_count', 'id']
 
     def __str__(self) -> str:
         return f'{self.race.office_title} - {self.vote_count}'
