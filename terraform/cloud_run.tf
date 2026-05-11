@@ -39,6 +39,7 @@ resource "google_cloud_run_v2_service" "backend" {
           cpu    = var.backend_cpu
           memory = var.backend_memory
         }
+        cpu_idle          = true
         startup_cpu_boost = true
       }
 
@@ -128,6 +129,7 @@ resource "google_cloud_run_v2_service" "frontend" {
           cpu    = "1"
           memory = "256Mi"
         }
+        cpu_idle = true
       }
     }
   }
