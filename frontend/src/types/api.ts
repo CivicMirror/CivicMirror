@@ -70,6 +70,28 @@ export interface TallyResponse {
   breakdowns: Record<string, Record<string, number>>;
 }
 
+export interface OfficialResultRow {
+  id: number;
+  candidate_name: string | null;
+  option_label: string | null;
+  vote_count: number;
+  vote_pct: number | null;
+  is_winner: boolean | null;
+  result_type: 'official' | 'unofficial';
+  certified_at: string | null;
+  source_url: string;
+  round_number: number | null;
+  is_write_in_aggregate: boolean;
+  jurisdiction_fragment: string;
+}
+
+export interface OfficialResultsResponse {
+  race_id: number;
+  certification_status: 'upcoming' | 'results_pending' | 'results_certified' | 'partial_results';
+  source_url: string;
+  results: OfficialResultRow[];
+}
+
 export interface Race {
   id: number;
   election: Election;
@@ -77,8 +99,8 @@ export interface Race {
   office_title: string;
   jurisdiction: string;
   geography_scope: string;
-  certification_status: string;
-  race_status: string;
+  certification_status: 'upcoming' | 'results_pending' | 'results_certified' | 'partial_results';
+  race_status: 'draft' | 'pending_review' | 'active' | 'cancelled' | 'archived';
   source: 'civic_api' | 'community';
   vote_method?: 'single_choice' | 'multi_seat' | 'ranked_choice' | 'yes_no' | string;
   max_selections?: number;

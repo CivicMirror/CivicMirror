@@ -1,21 +1,19 @@
 import type { ChipProps } from '@mui/material';
 import { Chip } from '@mui/material';
 import type { Race } from '../../types';
-import { getRaceDisplayStatus, type DisplayStatusKey } from '../../utils/format';
 
-const STATUS_MAP: Record<DisplayStatusKey, { label: string; color: ChipProps['color'] }> = {
-  upcoming: { label: 'Upcoming', color: 'info' },
+type RaceStatusKey = Race['race_status'];
+
+const STATUS_MAP: Record<RaceStatusKey, { label: string; color: ChipProps['color'] }> = {
+  draft: { label: 'Draft', color: 'default' },
+  pending_review: { label: 'Pending Review', color: 'warning' },
   active: { label: 'Active', color: 'success' },
-  results_pending: { label: 'Results Pending', color: 'warning' },
-  results_certified: { label: 'Certified', color: 'default' },
+  cancelled: { label: 'Cancelled', color: 'error' },
   archived: { label: 'Archived', color: 'default' },
 };
 
-function StatusChip(
-  props: Pick<Race, 'certification_status' | 'race_status' | 'voting_opens' | 'voting_closes'>,
-) {
-  const status = getRaceDisplayStatus(props);
-  const config = STATUS_MAP[status];
+function StatusChip({ race_status }: Pick<Race, 'race_status'>) {
+  const config = STATUS_MAP[race_status];
 
   return <Chip color={config.color} label={config.label} size="small" />;
 }

@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
   Stack,
   Typography,
 } from '@mui/material';
@@ -18,6 +19,8 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import AlreadyVotedPanel from '../components/races/AlreadyVotedPanel';
 import BallotCard from '../components/races/BallotCard';
+import CertificationBadge from '../components/races/CertificationBadge';
+import OfficialResultsPanel from '../components/races/OfficialResultsPanel';
 import StatusChip from '../components/races/StatusChip';
 import TallyBars from '../components/races/TallyBars';
 import { useAuth } from '../hooks/useAuth';
@@ -118,6 +121,7 @@ function RaceDetailPage() {
       ? null
       : raceDisplayStatus === 'results_pending' ||
           raceDisplayStatus === 'results_certified' ||
+          raceDisplayStatus === 'partial_results' ||
           raceDisplayStatus === 'archived'
         ? 'Voting is closed for this race, but the public tally remains visible.'
         : 'This race is not currently accepting votes.';
@@ -165,7 +169,10 @@ function RaceDetailPage() {
 
               <Stack alignItems={{ xs: 'flex-start', md: 'flex-end' }} gap={1}>
                 <Chip label={formatRaceSource(race.source)} variant="filled" />
-                <StatusChip {...race} />
+                <StatusChip race_status={race.race_status} />
+                {race.certification_status !== 'upcoming' ? (
+                  <CertificationBadge status={race.certification_status} />
+                ) : null}
               </Stack>
             </Stack>
 
@@ -218,6 +225,18 @@ function RaceDetailPage() {
           </Stack>
         </CardContent>
       </Card>
+
+      {race.certification_status !== 'upcoming' ? (
+        <Card>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Stack spacing={2.5}>
+              <Divider />
+              <Typography variant="h5">Official Results</Typography>
+              <OfficialResultsPanel certificationStatus={race.certification_status} raceId={race.id} />
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : null}
     </Stack>
   );
 }
