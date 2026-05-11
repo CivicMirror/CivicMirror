@@ -17,4 +17,8 @@ app.conf.beat_schedule = {
         'task': 'accounts.tasks.cleanup_expired_tokens',
         'schedule': crontab(minute=0, hour=0),
     },
+    'auto-close-community-races-daily': {
+        'task': 'elections.tasks.auto_close_community_races',
+        'schedule': crontab(minute=0, hour=1),
+    },
 }

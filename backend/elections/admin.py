@@ -1,6 +1,7 @@
 from django.contrib import admin
+from django.utils import timezone
 
-from .models import Candidate, Election, MeasureOption, Race
+from .models import Candidate, CommunityRace, Election, MeasureOption, Race
 
 
 @admin.register(Election)
@@ -20,16 +21,66 @@ class RaceAdmin(admin.ModelAdmin):
         'jurisdiction',
         'state',
         'source',
+        'community_status',
         'race_status',
         'certification_status',
     )
     search_fields = ('office_title', 'jurisdiction', 'canonical_key', 'ocd_division_id')
-    list_filter = ('race_type', 'source', 'race_status', 'certification_status', 'geography_scope')
-    autocomplete_fields = ('election', 'submitted_by')
+    list_filter = ('race_type', 'source', 'community_status', 'race_status', 'certification_status', 'geography_scope')
+    autocomplete_fields = ('election', 'submitter', 'reviewed_by')
 
     @admin.display(ordering='election__state')
     def state(self, obj):
         return obj.election.state
+
+
+@admin.register(CommunityRace)
+class CommunityRaceAdmin(admin.ModelAdmin):
+    list_display = ('office_title', 'jurisdiction', 'community_status', 'submitted_at', 'submitter', 'moderator_notes')
+    list_display_links = ('office_title',)
+    list_editable = ('moderator_notes',)
+    search_fields = ('office_title', 'jurisdiction', 'location_name', 'submitter__username')
+    list_filter = ('community_status',)
+    ordering = ('submitted_at',)
+    autocomplete_fields = ('election', 'submitter', 'reviewed_by')
+    readonly_fields = ('submitter', 'submitted_at', 'reviewed_at', 'reviewed_by')
+    actions = ('approve_races', 'reject_races')
+    fields = (
+        'election',
+        'race_type',
+        'office_title',
+        'jurisdiction',
+        'location_name',
+        'community_status',
+        'race_status',
+        'submitter',
+        'submitted_at',
+        'moderator_notes',
+        'rejection_reason',
+        'reviewed_at',
+        'reviewed_by',
+    )
+
+    @admin.action(description='Approve selected community races')
+    def approve_races(self, request, queryset):
+        updated = queryset.update(
+            community_status=Race.CommunityStatus.ACTIVE,
+            race_status=Race.RaceStatus.ACTIVE,
+            reviewed_at=timezone.now(),
+            reviewed_by=request.user,
+            rejection_reason='',
+        )
+        self.message_user(request, f'Approved {updated} community races.')
+
+    @admin.action(description='Reject selected community races')
+    def reject_races(self, request, queryset):
+        updated = queryset.update(
+            community_status=Race.CommunityStatus.REJECTED,
+            reviewed_at=timezone.now(),
+            reviewed_by=request.user,
+            rejection_reason='Rejected during moderation review.',
+        )
+        self.message_user(request, f'Rejected {updated} community races.')
 
 
 @admin.register(Candidate)

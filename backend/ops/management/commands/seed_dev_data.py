@@ -1,4 +1,3 @@
-import itertools
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -138,22 +137,22 @@ class Command(BaseCommand):
             profiles.append(profile)
 
         all_races = candidate_races + measure_races
-        vote_targets = []
-        for race in candidate_races:
-            vote_targets.extend(list(race.candidates.all()))
-        for race in measure_races:
-            vote_targets.extend(list(race.measure_options.all()))
 
         created_votes = 0
-        profile_cycle = itertools.cycle(profiles)
-        for target in vote_targets:
+        for race_index, race in enumerate(all_races):
+            targets = list(race.candidates.all()) or list(race.measure_options.all())
+            if not targets:
+                continue
+            for profile_index, profile in enumerate(profiles):
+                if created_votes >= 20:
+                    break
+                target = targets[(race_index + profile_index) % len(targets)]
+                if isinstance(target, Candidate):
+                    MockVote.objects.create(user=profile.user, race=race, candidate=target)
+                else:
+                    MockVote.objects.create(user=profile.user, race=race, measure_option=target)
+                created_votes += 1
             if created_votes >= 20:
                 break
-            profile = next(profile_cycle)
-            if isinstance(target, Candidate):
-                MockVote.objects.create(user=profile.user, race=target.race, candidate=target)
-            else:
-                MockVote.objects.create(user=profile.user, race=target.race, measure_option=target)
-            created_votes += 1
 
         self.stdout.write(self.style.SUCCESS('Seed data created successfully.'))

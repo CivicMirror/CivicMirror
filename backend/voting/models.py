@@ -16,9 +16,10 @@ class MockVote(models.Model):
                 check=(Q(candidate__isnull=False) & Q(measure_option__isnull=True))
                 | (Q(candidate__isnull=True) & Q(measure_option__isnull=False)),
                 name='exactly_one_vote_target',
-            )
+            ),
+            models.UniqueConstraint(fields=['user', 'race'], name='unique_user_race_vote'),
         ]
-        indexes = [models.Index(fields=['race'])]
+        indexes = [models.Index(fields=['race', 'cast_at'])]
         ordering = ['-cast_at']
 
     def __str__(self) -> str:
