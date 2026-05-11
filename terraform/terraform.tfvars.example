@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+
+gcp_project_id = "civicmirror-2026"
+gcp_region     = "us-central1"
+github_repo    = "tokendad/CivicMirror"
+
+# Cloud Run scaling
+backend_min_instances  = 0
+backend_max_instances  = 3
+frontend_min_instances = 0
+frontend_max_instances = 3
+gunicorn_workers       = 2
+
+# Cloudflare — get zone_id from Cloudflare Dashboard → welshrd.com → Overview → Zone ID
+cloudflare_api_token = "YOUR_CLOUDFLARE_API_TOKEN"  # Token needs Zone:DNS:Edit permission
+cloudflare_zone_id   = "YOUR_CLOUDFLARE_ZONE_ID"

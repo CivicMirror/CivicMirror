@@ -7,3 +7,9 @@ backend/staticfiles/
 **/__pycache__/
 *.pyc
 .pytest_cache/
+
+# Terraform
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
