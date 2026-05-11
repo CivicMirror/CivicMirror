@@ -1,4 +1,17 @@
+from django.conf import settings
 from django.db import models
+
+
+class PublicRaceManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            ~models.Q(source='community') | models.Q(source='community', community_status='active')
+        )
+
+
+class CommunityRaceManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(source='community')
 
 
 class Election(models.Model):
@@ -45,6 +58,11 @@ class Race(models.Model):
         CIVIC_API = 'civic_api', 'Civic API'
         COMMUNITY = 'community', 'Community'
 
+    class CommunityStatus(models.TextChoices):
+        PENDING_REVIEW = 'pending_review', 'Pending Review'
+        ACTIVE = 'active', 'Active'
+        REJECTED = 'rejected', 'Rejected'
+
     class RaceStatus(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         PENDING_REVIEW = 'pending_review', 'Pending Review'
@@ -67,7 +85,15 @@ class Race(models.Model):
     voting_closes = models.DateTimeField(null=True, blank=True)
     certification_status = models.CharField(max_length=30, default=CertificationStatus.UPCOMING, choices=CertificationStatus.choices)
     source = models.CharField(max_length=20, choices=Source.choices)
-    submitted_by = models.ForeignKey('accounts.UserProfile', null=True, blank=True, on_delete=models.SET_NULL, related_name='submitted_races')
+    community_status = models.CharField(max_length=20, choices=CommunityStatus.choices, null=True, blank=True)
+    submitter = models.ForeignKey('accounts.UserProfile', null=True, blank=True, on_delete=models.SET_NULL, related_name='submitted_races')
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    source_links = models.JSONField(default=list, blank=True)
+    location_name = models.CharField(max_length=255, blank=True)
+    moderator_notes = models.TextField(blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='reviewed_races')
+    rejection_reason = models.TextField(blank=True)
     race_status = models.CharField(max_length=20, default=RaceStatus.ACTIVE, choices=RaceStatus.choices)
     vote_method = models.CharField(max_length=20, default=VoteMethod.SINGLE_CHOICE, choices=VoteMethod.choices)
     max_selections = models.PositiveIntegerField(default=1)
@@ -75,6 +101,13 @@ class Race(models.Model):
     ocd_division_id = models.CharField(max_length=255, blank=True)
     normalized_office_title = models.CharField(max_length=255, blank=True)
     canonical_key = models.CharField(max_length=512, unique=True, null=True, blank=True)
+    ballot_type = models.CharField(max_length=100, blank=True)
+    yes_vote_details = models.TextField(blank=True)
+    no_vote_details = models.TextField(blank=True)
+    supporting_links = models.JSONField(default=list, blank=True)
+
+    objects = models.Manager()
+    public_objects = PublicRaceManager()
 
     class Meta:
         indexes = [
@@ -133,3 +166,13 @@ class MeasureOption(models.Model):
 
     def __str__(self) -> str:
         return f'{self.option_label} ({self.race.office_title})'
+
+
+class CommunityRace(Race):
+    objects = CommunityRaceManager()
+
+    class Meta:
+        proxy = True
+        verbose_name = 'Community race'
+        verbose_name_plural = 'Community races'
+        ordering = ['submitted_at']
