@@ -73,6 +73,7 @@ jobs:
           service: civicmirror-backend
           image: ${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}
           region: ${{ env.GCP_REGION }}
+          service_account: cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Run database migrations
         run: |
@@ -120,6 +121,7 @@ jobs:
           service: civicmirror-frontend
           image: ${{ env.AR_BASE }}/frontend:${{ steps.tag.outputs.tag }}
           region: ${{ env.GCP_REGION }}
+          service_account: cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Deployment summary
         if: success()
