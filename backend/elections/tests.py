@@ -198,3 +198,151 @@ def test_public_race_views_hide_pending_community_races():
     assert visible_race.id in returned_ids
     assert detail_response.status_code == 404
     assert visible_detail.status_code == 200
+
+
+# ── Scope filtering ───────────────────────────────────────────────────────────
+
+def _make_election(source_id, state=None, level=Election.JurisdictionLevel.STATE):
+    return Election.objects.create(
+        name=f'Election {source_id}',
+        election_date=timezone.localdate() + timezone.timedelta(days=30),
+        jurisdiction_level=level,
+        state=state,
+        source_id=source_id,
+        status=Election.Status.UPCOMING,
+    )
+
+
+def _make_race(election, office_title='Governor', *, source=Race.Source.CIVIC_API):
+    return Race.objects.create(
+        election=election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title=office_title,
+        jurisdiction='statewide',
+        geography_scope='statewide',
+        source=source,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+
+
+@pytest.mark.django_db
+def test_scope_national_returns_only_national_races():
+    national_election = _make_election('nat-1', level=Election.JurisdictionLevel.NATIONAL)
+    nc_election = _make_election('nc-1', state='NC')
+    national_race = _make_race(national_election, 'President')
+    nc_race = _make_race(nc_election, 'NC Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'national'})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert national_race.id in ids
+    assert nc_race.id not in ids
+
+
+@pytest.mark.django_db
+def test_scope_state_returns_national_and_matching_state_races():
+    national_election = _make_election('nat-2', level=Election.JurisdictionLevel.NATIONAL)
+    nc_election = _make_election('nc-2', state='NC')
+    ga_election = _make_election('ga-2', state='GA')
+    national_race = _make_race(national_election, 'President')
+    nc_race = _make_race(nc_election, 'NC Governor')
+    ga_race = _make_race(ga_election, 'GA Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'state', 'state': 'NC'})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert national_race.id in ids
+    assert nc_race.id in ids
+    assert ga_race.id not in ids
+
+
+@pytest.mark.django_db
+def test_scope_state_without_state_param_returns_empty():
+    _make_race(_make_election('nc-3', state='NC'), 'NC Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'state'})
+
+    assert response.status_code == 200
+    assert response.json()['count'] == 0
+
+
+@pytest.mark.django_db
+def test_scope_zip_resolves_to_state_and_includes_national():
+    national_election = _make_election('nat-3', level=Election.JurisdictionLevel.NATIONAL)
+    nc_election = _make_election('nc-4', state='NC')
+    ga_election = _make_election('ga-3', state='GA')
+    national_race = _make_race(national_election, 'President')
+    nc_race = _make_race(nc_election, 'NC Governor')
+    ga_race = _make_race(ga_election, 'GA Governor')
+
+    # ZIP 27601 is Raleigh, NC
+    response = APIClient().get('/api/races/', {'scope': 'zip', 'zip': '27601'})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert national_race.id in ids
+    assert nc_race.id in ids
+    assert ga_race.id not in ids
+
+
+@pytest.mark.django_db
+def test_scope_zip_invalid_zip_returns_empty():
+    _make_race(_make_election('nc-5', state='NC'), 'NC Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'zip', 'zip': '99999'})
+
+    assert response.status_code == 200
+    assert response.json()['count'] == 0
+
+
+@pytest.mark.django_db
+def test_scope_address_returns_empty():
+    _make_race(_make_election('nc-6', state='NC'), 'NC Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'address', 'address': '1 E Edenton St, Raleigh, NC'})
+
+    assert response.status_code == 200
+    assert response.json()['count'] == 0
+
+
+@pytest.mark.django_db
+def test_unknown_scope_returns_empty():
+    _make_race(_make_election('nc-7', state='NC'), 'NC Governor')
+
+    response = APIClient().get('/api/races/', {'scope': 'bogus'})
+
+    assert response.status_code == 200
+    assert response.json()['count'] == 0
+
+
+@pytest.mark.django_db
+def test_election_id_param_filters_by_election():
+    election_a = _make_election('election-a', state='NC')
+    election_b = _make_election('election-b', state='NC')
+    race_a = _make_race(election_a, 'NC Senate')
+    race_b = _make_race(election_b, 'NC House')
+
+    response = APIClient().get('/api/races/', {'election_id': election_a.id})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert race_a.id in ids
+    assert race_b.id not in ids
+
+
+@pytest.mark.django_db
+def test_backward_compat_state_param_without_scope():
+    nc_election = _make_election('nc-bc', state='NC')
+    ga_election = _make_election('ga-bc', state='GA')
+    nc_race = _make_race(nc_election, 'NC Governor')
+    ga_race = _make_race(ga_election, 'GA Governor')
+
+    response = APIClient().get('/api/races/', {'state': 'NC'})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert nc_race.id in ids
+    assert ga_race.id not in ids

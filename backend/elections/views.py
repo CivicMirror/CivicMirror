@@ -1,7 +1,7 @@
 from datetime import datetime, time
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from knox.auth import TokenAuthentication
@@ -22,6 +22,7 @@ from .serializers import (
     RaceSerializer,
     RaceSummarySerializer,
 )
+from .zip_utils import resolve_state_from_zip
 
 
 class ElectionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -46,9 +47,44 @@ class RaceViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = Race.public_objects.select_related('election', 'submitter').prefetch_related('candidates', 'measure_options')
+
+        scope = self.request.query_params.get('scope')
         state = self.request.query_params.get('state')
-        if state:
+        zip_code = self.request.query_params.get('zip')
+        election_id = self.request.query_params.get('election_id')
+
+        if election_id:
+            queryset = queryset.filter(election_id=election_id)
+
+        if scope == 'national':
+            queryset = queryset.filter(election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL)
+        elif scope == 'state':
+            if not state:
+                return queryset.none()
+            queryset = queryset.filter(
+                Q(election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL)
+                | Q(election__state=state.upper())
+            )
+        elif scope == 'zip':
+            if not zip_code:
+                return queryset.none()
+            resolved_state = resolve_state_from_zip(zip_code)
+            if not resolved_state:
+                return queryset.none()
+            queryset = queryset.filter(
+                Q(election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL)
+                | Q(election__state=resolved_state)
+            )
+        elif scope == 'address':
+            # Address-based geocoding is not yet implemented.
+            return queryset.none()
+        elif scope is not None:
+            # Unknown scope — return nothing rather than leaking all races.
+            return queryset.none()
+        elif state:
+            # Backward-compatible: ?state=XX without a scope param.
             queryset = queryset.filter(election__state=state.upper())
+
         return queryset
 
     def get_serializer_class(self):

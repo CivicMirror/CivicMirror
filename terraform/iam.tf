@@ -19,6 +19,14 @@ resource "google_service_account_iam_member" "github_act_as_run" {
   member             = "serviceAccount:${data.google_service_account.github_deployer.email}"
 }
 
+resource "google_cloud_run_v2_job_iam_member" "scheduler_invoke_sync" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  name     = google_cloud_run_v2_job.sync_elections.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${data.google_service_account.cloud_run_runtime.email}"
+}
+
 # Grant cloudrun-runtime access to read secrets
 locals {
   runtime_secrets = ["DJANGO_SECRET_KEY", "DATABASE_URL", "REDIS_URL", "CIVIC_API_KEY"]

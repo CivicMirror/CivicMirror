@@ -181,3 +181,88 @@ resource "google_cloud_run_domain_mapping" "frontend" {
     route_name = google_cloud_run_v2_service.frontend.name
   }
 }
+
+# ── Sync Elections — Cloud Run Job ────────────────────────────────────────────
+resource "google_cloud_run_v2_job" "sync_elections" {
+  name                = "civicmirror-sync-elections"
+  location            = var.gcp_region
+  project             = var.gcp_project_id
+  deletion_protection = false
+
+  template {
+    task_count  = 1
+    parallelism = 1
+
+    template {
+      service_account = data.google_service_account.cloud_run_runtime.email
+      max_retries     = 0
+      timeout         = "3600s"
+
+      vpc_access {
+        connector = data.google_vpc_access_connector.connector.id
+        egress    = "PRIVATE_RANGES_ONLY"
+      }
+
+      containers {
+        image   = "us-central1-docker.pkg.dev/${var.gcp_project_id}/civicmirror-images/backend:latest"
+        command = ["python"]
+        args    = ["manage.py", "sync_civic_elections"]
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "512Mi"
+          }
+        }
+
+        env {
+          name  = "DJANGO_SETTINGS_MODULE"
+          value = "config.settings.prod"
+        }
+        env {
+          name  = "DJANGO_ALLOWED_HOSTS"
+          value = "localhost"
+        }
+        # Run all Celery tasks in-process (no worker needed in this job).
+        env {
+          name  = "CELERY_TASK_ALWAYS_EAGER"
+          value = "true"
+        }
+        # Do not propagate per-address exceptions so one failure doesn't abort the whole job.
+        env {
+          name  = "CELERY_TASK_EAGER_PROPAGATES"
+          value = "false"
+        }
+
+        dynamic "env" {
+          for_each = local.backend_secret_env_vars
+          content {
+            name = env.value.name
+            value_source {
+              secret_key_ref {
+                secret  = env.value.secret_id
+                version = "latest"
+              }
+            }
+          }
+        }
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+      }
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [data.google_sql_database_instance.db.connection_name]
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].template[0].containers[0].image]
+  }
+}

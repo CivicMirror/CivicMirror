@@ -10,3 +10,4 @@ requests
 gunicorn
 psycopg2-binary
 django-filter
+zipcodes
