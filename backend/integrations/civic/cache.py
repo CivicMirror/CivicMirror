@@ -39,5 +39,7 @@ def set_cached_voter_info(address: str, election_id: str, data: dict):
 def races_are_fresh(election: Election) -> bool:
     if not election.last_synced_at:
         return False
+    if not election.races.filter(source='civic_api').exists():
+        return False
     ttl = get_race_ttl(election.election_date)
     return (timezone.now() - election.last_synced_at) < ttl

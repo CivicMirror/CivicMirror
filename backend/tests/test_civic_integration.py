@@ -28,6 +28,19 @@ def test_races_are_fresh_uses_dynamic_ttl():
         status=Election.Status.UPCOMING,
         last_synced_at=timezone.now(),
     )
+    # Without any civic_api races, should not be considered fresh
+    assert races_are_fresh(election) is False
+    # Add a civic_api race — now it should be fresh
+    Race.objects.create(
+        election=election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title="Governor",
+        jurisdiction="statewide",
+        geography_scope="statewide",
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
     assert races_are_fresh(election) is True
 
 

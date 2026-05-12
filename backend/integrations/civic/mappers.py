@@ -66,7 +66,19 @@ def infer_race_type(contest: dict) -> str:
 
 
 def extract_contest_title(contest: dict) -> str:
-    return contest.get("office") or contest.get("referendumTitle") or contest.get("referendumSubtitle") or "Untitled Contest"
+    office = (
+        contest.get("office")
+        or contest.get("ballotTitle")
+        or contest.get("referendumTitle")
+        or contest.get("referendumSubtitle")
+    )
+    if not office:
+        return "Untitled Contest"
+    parties = contest.get("primaryParties") or []
+    if parties and (contest.get("type") or "").lower() == "primary":
+        party_label = " / ".join(p.title() for p in parties)
+        return f"{office} \u2014 {party_label} Primary"
+    return office
 
 
 def extract_jurisdiction(contest: dict) -> str:
