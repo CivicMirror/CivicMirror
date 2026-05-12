@@ -22,13 +22,19 @@ def _backoff(retry_count: int) -> int:
 
 
 
+_NATIONAL_SAMPLE_STATES = ["CA", "TX", "NY", "FL", "PA", "OH", "GA", "NC", "MI", "VA"]
+
+
 def _representative_addresses_for_election(election: Election) -> list[dict]:
     if election.state and election.state in REPRESENTATIVE_ADDRESSES:
         return REPRESENTATIVE_ADDRESSES[election.state]
-    addresses = []
-    for items in REPRESENTATIVE_ADDRESSES.values():
-        addresses.extend(items)
-    return addresses
+    # For national/unknown elections sample a fixed set of large states to
+    # avoid exhausting API quota by querying all 50 states.
+    return [
+        addr
+        for state in _NATIONAL_SAMPLE_STATES
+        for addr in REPRESENTATIVE_ADDRESSES.get(state, [])[:1]
+    ]
 
 
 @shared_task(bind=True, max_retries=3)
