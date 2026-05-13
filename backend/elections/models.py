@@ -34,6 +34,13 @@ class Election(models.Model):
     source_id = models.CharField(max_length=50, unique=True)
     status = models.CharField(max_length=30, default=Status.UPCOMING, choices=Status.choices)
     last_synced_at = models.DateTimeField(null=True, blank=True)
+    election_cycle = models.ForeignKey(
+        'ElectionCycle',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='elections',
+    )
 
     class Meta:
         indexes = [models.Index(fields=['source_id'])]
@@ -41,6 +48,19 @@ class Election(models.Model):
 
     def __str__(self) -> str:
         return f'{self.name} ({self.election_date})'
+
+
+class ElectionCycle(models.Model):
+    cycle_year = models.IntegerField(unique=True)
+    description = models.CharField(max_length=100, blank=True)
+    cycle_start = models.DateField()
+    cycle_end = models.DateField()
+
+    class Meta:
+        ordering = ['-cycle_year']
+
+    def __str__(self):
+        return f'Election Cycle {self.cycle_year}'
 
 
 class Race(models.Model):
@@ -57,6 +77,8 @@ class Race(models.Model):
     class Source(models.TextChoices):
         CIVIC_API = 'civic_api', 'Civic API'
         COMMUNITY = 'community', 'Community'
+        OPENELECTIONS = 'openelections', 'OpenElections'
+        MEDSL = 'medsl', 'MEDSL'
 
     class CommunityStatus(models.TextChoices):
         PENDING_REVIEW = 'pending_review', 'Pending Review'
@@ -75,6 +97,13 @@ class Race(models.Model):
         MULTI_SEAT = 'multi_seat', 'Multi Seat'
         RANKED_CHOICE = 'ranked_choice', 'Ranked Choice'
         YES_NO = 'yes_no', 'Yes / No'
+
+    class MatchConfidence(models.TextChoices):
+        VERIFIED = 'verified', 'Verified'
+        HIGH = 'high', 'High'
+        MEDIUM = 'medium', 'Medium'
+        LOW = 'low', 'Low'
+        FLAGGED = 'flagged', 'Flagged for Review'
 
     election = models.ForeignKey(Election, on_delete=models.CASCADE, related_name='races')
     race_type = models.CharField(max_length=20, choices=RaceType.choices)
@@ -105,6 +134,13 @@ class Race(models.Model):
     yes_vote_details = models.TextField(blank=True)
     no_vote_details = models.TextField(blank=True)
     supporting_links = models.JSONField(default=list, blank=True)
+    source_metadata = models.JSONField(default=dict, blank=True)
+    match_confidence = models.CharField(
+        max_length=20,
+        choices=MatchConfidence.choices,
+        default=MatchConfidence.VERIFIED,
+        blank=True,
+    )
 
     objects = models.Manager()
     public_objects = PublicRaceManager()
@@ -143,6 +179,12 @@ class Candidate(models.Model):
     description = models.TextField(blank=True)
     image_url = models.URLField(blank=True)
     website_url = models.URLField(blank=True)
+    fec_candidate_id = models.CharField(max_length=20, blank=True, db_index=True)
+    bioguide_id = models.CharField(max_length=20, blank=True, db_index=True)
+    openstates_person_id = models.CharField(max_length=50, blank=True)
+    source_metadata = models.JSONField(default=dict, blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    contact_office = models.CharField(max_length=255, blank=True)
 
     class Meta:
         constraints = [
@@ -166,6 +208,25 @@ class MeasureOption(models.Model):
 
     def __str__(self) -> str:
         return f'{self.option_label} ({self.race.office_title})'
+
+
+class DistrictRecord(models.Model):
+    state = models.CharField(max_length=2)
+    district_type = models.CharField(max_length=50)
+    district_number = models.CharField(max_length=20, blank=True)
+    ocd_division_id = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(max_length=255)
+    fips_code = models.CharField(max_length=20, blank=True)
+    election_year_valid = models.IntegerField(null=True, blank=True)
+    approximate = models.BooleanField(default=False)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('ocd_division_id', 'election_year_valid')]
+        indexes = [models.Index(fields=['state', 'district_type'])]
+
+    def __str__(self):
+        return f'{self.name} ({self.ocd_division_id})'
 
 
 class CommunityRace(Race):

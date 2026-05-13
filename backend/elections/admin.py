@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Candidate, CommunityRace, Election, MeasureOption, Race
+from .models import Candidate, CommunityRace, DistrictRecord, Election, ElectionCycle, MeasureOption, Race
 
 
 @admin.register(Election)
@@ -10,6 +10,12 @@ class ElectionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'source_id', 'state')
     list_filter = ('jurisdiction_level', 'status', 'state', 'election_date')
     ordering = ('election_date', 'name')
+
+
+@admin.register(ElectionCycle)
+class ElectionCycleAdmin(admin.ModelAdmin):
+    list_display = ('cycle_year', 'description', 'cycle_start', 'cycle_end')
+    search_fields = ('=cycle_year', 'description')
 
 
 @admin.register(Race)
@@ -96,3 +102,10 @@ class MeasureOptionAdmin(admin.ModelAdmin):
     list_display = ('option_label', 'race')
     search_fields = ('option_label', 'race__office_title')
     autocomplete_fields = ('race',)
+
+
+@admin.register(DistrictRecord)
+class DistrictRecordAdmin(admin.ModelAdmin):
+    list_display = ('name', 'state', 'district_type', 'district_number', 'ocd_division_id', 'election_year_valid')
+    search_fields = ('name', 'ocd_division_id', 'fips_code')
+    list_filter = ('state', 'district_type', 'approximate', 'election_year_valid')

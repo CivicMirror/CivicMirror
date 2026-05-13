@@ -19,9 +19,54 @@ class SyncLog(models.Model):
     task_name = models.CharField(max_length=100, blank=True)
     address_label = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=30, default=Status.STARTED, choices=Status.choices)
+    cycle_year = models.IntegerField(null=True, blank=True)
+    records_skipped = models.IntegerField(default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         ordering = ['-started_at']
 
     def __str__(self) -> str:
         return f'{self.task_name or self.source} ({self.status})'
+
+
+class SourceRecord(models.Model):
+    class SourceType(models.TextChoices):
+        CIVIC = 'civic', 'Google Civic'
+        FEC = 'fec', 'OpenFEC'
+        CONGRESS = 'congress', 'Congress Legislators'
+        OPENSTATES = 'openstates', 'Open States'
+        CENSUS = 'census', 'U.S. Census'
+        OPENELECTIONS = 'openelections', 'OpenElections'
+        MEDSL = 'medsl', 'MEDSL'
+
+    source = models.CharField(max_length=30, choices=SourceType.choices)
+    external_id = models.CharField(max_length=255)
+    raw_payload = models.JSONField()
+    payload_checksum = models.CharField(max_length=64)
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    linked_race = models.ForeignKey(
+        'elections.Race',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='source_records',
+    )
+    linked_candidate = models.ForeignKey(
+        'elections.Candidate',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='source_records',
+    )
+
+    class Meta:
+        unique_together = [('source', 'external_id')]
+        indexes = [
+            models.Index(fields=['source', 'external_id']),
+            models.Index(fields=['linked_race']),
+        ]
+
+    def __str__(self):
+        return f'{self.source}:{self.external_id}'

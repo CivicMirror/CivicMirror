@@ -242,21 +242,32 @@ def test_scope_national_returns_only_national_races():
 
 
 @pytest.mark.django_db
-def test_scope_state_returns_national_and_matching_state_races():
+def test_scope_state_returns_only_statewide_races_for_selected_state():
     national_election = _make_election('nat-2', level=Election.JurisdictionLevel.NATIONAL)
     nc_election = _make_election('nc-2', state='NC')
     ga_election = _make_election('ga-2', state='GA')
     national_race = _make_race(national_election, 'President')
     nc_race = _make_race(nc_election, 'NC Governor')
     ga_race = _make_race(ga_election, 'GA Governor')
+    local_nc_race = Race.objects.create(
+        election=nc_election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title='Charlotte City Council',
+        jurisdiction='Charlotte',
+        geography_scope='city',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
 
     response = APIClient().get('/api/races/', {'scope': 'state', 'state': 'NC'})
 
     assert response.status_code == 200
     ids = {r['id'] for r in response.json()['results']}
-    assert national_race.id in ids
     assert nc_race.id in ids
+    assert national_race.id not in ids
     assert ga_race.id not in ids
+    assert local_nc_race.id not in ids
 
 
 @pytest.mark.django_db

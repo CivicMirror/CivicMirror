@@ -62,8 +62,8 @@ class RaceViewSet(viewsets.ReadOnlyModelViewSet):
             if not state:
                 return queryset.none()
             queryset = queryset.filter(
-                Q(election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL)
-                | Q(election__state=state.upper())
+                election__state=state.upper(),
+                geography_scope='statewide',
             )
         elif scope == 'zip':
             if not zip_code:
@@ -83,7 +83,10 @@ class RaceViewSet(viewsets.ReadOnlyModelViewSet):
             return queryset.none()
         elif state:
             # Backward-compatible: ?state=XX without a scope param.
-            queryset = queryset.filter(election__state=state.upper())
+            queryset = queryset.filter(
+                election__state=state.upper(),
+                geography_scope='statewide',
+            )
 
         return queryset
 

@@ -50,6 +50,11 @@ INSTALLED_APPS = [
     'ops',
     'legal',
     'integrations.civic',
+    'integrations.census',
+    'integrations.congress',
+    'integrations.fec',
+    'integrations.openstates',
+    'integrations.openelections',
 ]
 
 MIDDLEWARE = [
@@ -165,6 +170,9 @@ SPECTACULAR_SETTINGS = {
 }
 
 CIVIC_API_KEY = env('CIVIC_API_KEY', default='')
+FEC_API_KEY = env('FEC_API_KEY', default='')
+OPENSTATES_API_KEY = env('OPENSTATES_API_KEY', default='')
+GITHUB_TOKEN = env('GITHUB_TOKEN', default='')
 CIVIC_API_BASE = env('CIVIC_API_BASE', default='https://www.googleapis.com/civicinfo/v2')
 CIVIC_HTTP_TIMEOUT_SECONDS = env.int('CIVIC_HTTP_TIMEOUT_SECONDS', default=10)
 CIVIC_MAX_RETRIES = env.int('CIVIC_MAX_RETRIES', default=3)
