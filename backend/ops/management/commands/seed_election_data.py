@@ -54,6 +54,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        self._check_database()
         self._configure_eager_celery()
 
         only = options.get('only_step')
@@ -87,6 +88,15 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _check_database(self):
+        """Fail fast if Django is pointed at SQLite — that means DATABASE_URL is missing."""
+        from django.db import connection  # noqa: PLC0415
+        if 'sqlite' in connection.vendor:
+            raise CommandError(
+                'DATABASE_URL is not configured — Django is using SQLite. '
+                'Set DATABASE_URL in the environment before seeding.'
+            )
 
     def _configure_eager_celery(self):
         """
