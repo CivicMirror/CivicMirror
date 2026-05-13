@@ -14,8 +14,10 @@ RUN pip install --no-cache-dir -r requirements/base.txt
 # Copy source
 COPY . .
 
-# Collect static files (needed for Django admin)
-RUN python manage.py collectstatic --noinput --settings=config.settings.base 2>/dev/null || true
+# Collect static files (needed for Django admin + WhiteNoise)
+# SECRET_KEY is only used at import time; a dummy value is safe for collectstatic.
+RUN SECRET_KEY=build-only DJANGO_SETTINGS_MODULE=config.settings.base \
+    python manage.py collectstatic --noinput
 
 # Run as non-root
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app

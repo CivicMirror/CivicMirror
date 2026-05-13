@@ -8,6 +8,7 @@ celery[redis]
 redis
 requests
 gunicorn
+whitenoise[brotli]
 psycopg2-binary
 django-filter
 zipcodes
