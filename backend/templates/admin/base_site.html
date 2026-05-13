@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">CivicMirror Administration</a>
+</div>
+{% if user.is_anonymous %}{% include "admin/color_theme_toggle.html" %}{% endif %}
+{% endblock %}
+
+{% block userlinks %}
+<a href="{% url 'admin-commands' %}">&#9729; Cloud Commands</a> &nbsp;&bull;&nbsp;
+{{ block.super }}
+{% endblock %}

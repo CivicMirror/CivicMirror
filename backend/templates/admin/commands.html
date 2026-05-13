@@ -1,0 +1,214 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Cloud Run Commands | CivicMirror Admin{% endblock %}
+
+{% block content_title %}<h1>&#9729; Cloud Run Commands</h1>{% endblock %}
+
+{% block content %}
+<style>
+  .cmd-card {
+    background: var(--darkened-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .cmd-card-header {
+    background: var(--primary);
+    color: var(--header-link-color, #fff);
+    margin: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .cmd-card-body {
+    padding: 4px 0 12px;
+  }
+  .cmd-desc {
+    margin: 8px 16px 4px;
+    color: var(--body-quiet-color);
+    font-size: 13px;
+  }
+  .cmd-label {
+    margin: 12px 16px 4px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--body-fg);
+  }
+  .cmd-block {
+    position: relative;
+    margin: 0 16px 0;
+  }
+  .cmd-block pre {
+    background: #0d1117;
+    color: #c9d1d9;
+    padding: 12px 80px 12px 14px;
+    margin: 0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.6;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    min-width: 56px;
+  }
+  .copy-btn:hover { opacity: 0.85; }
+  .copy-btn.copied { background: #2ea043; }
+</style>
+
+<script>
+function copyCmd(id) {
+  const el = document.getElementById(id);
+  const btn = el.closest('.cmd-block').querySelector('.copy-btn');
+  navigator.clipboard.writeText(el.innerText.trim()).then(function() {
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+
+<!-- ── Seed Election Data ── -->
+<div class="cmd-card">
+  <p class="cmd-card-header">&#127807; Seed Election Data</p>
+  <div class="cmd-card-body">
+    <p class="cmd-desc">
+      One-time cold-start seed. Runs Census &#8594; Google Civic &#8594; Congress &#8594; FEC in order.
+      Allow 5–15 minutes.  Open States is opt-in due to rate limits.
+    </p>
+
+    <p class="cmd-label">Create and run seed job (first time only):</p>
+    <div class="cmd-block">
+      <pre id="cmd-seed-create">gcloud beta run jobs create civicmirror-seed \
+  --image us-central1-docker.pkg.dev/civicmirror-2026/civicmirror-images/backend:latest \
+  --region us-central1 --project civicmirror-2026 \
+  --set-env-vars DJANGO_SETTINGS_MODULE=config.settings.prod \
+  --set-secrets DATABASE_URL=DATABASE_URL:latest \
+  --set-secrets DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest \
+  --add-cloudsql-instances civicmirror-2026:us-central1:civicmirror-db \
+  --service-account cloudrun-runtime@civicmirror-2026.iam.gserviceaccount.com \
+  --command "python,manage.py,seed_election_data" \
+  --execute-now --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-seed-create')">Copy</button>
+    </div>
+
+    <p class="cmd-label">Re-run existing seed job:</p>
+    <div class="cmd-block">
+      <pre id="cmd-seed-run">gcloud beta run jobs execute civicmirror-seed \
+  --region us-central1 --project civicmirror-2026 --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-seed-run')">Copy</button>
+    </div>
+
+    <p class="cmd-label">Seed including Open States (rate-limited — use sparingly):</p>
+    <div class="cmd-block">
+      <pre id="cmd-seed-openstates">gcloud beta run jobs update civicmirror-seed \
+  --command "python,manage.py,seed_election_data,--include-openstates" \
+  --region us-central1 --project civicmirror-2026
+
+gcloud beta run jobs execute civicmirror-seed \
+  --region us-central1 --project civicmirror-2026 --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-seed-openstates')">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Database Migrations ── -->
+<div class="cmd-card">
+  <p class="cmd-card-header">&#128451; Database Migrations</p>
+  <div class="cmd-card-body">
+    <p class="cmd-desc">
+      Migrations run automatically on every deploy via CI/CD.
+      Use this only when a manual run is needed.
+    </p>
+    <div class="cmd-block" style="margin-top:10px">
+      <pre id="cmd-migrate">gcloud run jobs execute civicmirror-migrate \
+  --region us-central1 --project civicmirror-2026 --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-migrate')">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Admin User Management ── -->
+<div class="cmd-card">
+  <p class="cmd-card-header">&#128100; Admin User Management</p>
+  <div class="cmd-card-body">
+    <p class="cmd-desc">
+      Create or update the Django admin superuser.
+      Replace <strong>USERNAME</strong>, <strong>EMAIL</strong>, and <strong>PASSWORD</strong> before running.
+    </p>
+
+    <p class="cmd-label">Execute the pre-configured superuser job:</p>
+    <div class="cmd-block">
+      <pre id="cmd-superuser-run">gcloud beta run jobs execute civicmirror-createsuperuser \
+  --region us-central1 --project civicmirror-2026 --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-superuser-run')">Copy</button>
+    </div>
+
+    <p class="cmd-label">Update credentials then run:</p>
+    <div class="cmd-block">
+      <pre id="cmd-superuser-update">gcloud beta run jobs update civicmirror-createsuperuser \
+  --update-env-vars DJANGO_SUPERUSER_USERNAME=USERNAME \
+  --update-env-vars DJANGO_SUPERUSER_EMAIL=EMAIL \
+  --update-env-vars DJANGO_SUPERUSER_PASSWORD=PASSWORD \
+  --region us-central1 --project civicmirror-2026
+
+gcloud beta run jobs execute civicmirror-createsuperuser \
+  --region us-central1 --project civicmirror-2026 --wait</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-superuser-update')">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Logs ── -->
+<div class="cmd-card">
+  <p class="cmd-card-header">&#128203; Live Logs</p>
+  <div class="cmd-card-body">
+    <p class="cmd-desc">Tail live logs from the backend API or frontend nginx. Press Ctrl+C to stop.</p>
+
+    <p class="cmd-label">Backend (Django / Gunicorn — API calls, errors):</p>
+    <div class="cmd-block">
+      <pre id="cmd-logs-backend">gcloud run services logs tail civicmirror-backend \
+  --region us-central1 --project civicmirror-2026</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-logs-backend')">Copy</button>
+    </div>
+
+    <p class="cmd-label">Frontend (nginx access logs):</p>
+    <div class="cmd-block">
+      <pre id="cmd-logs-frontend">gcloud run services logs tail civicmirror-frontend \
+  --region us-central1 --project civicmirror-2026</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-logs-frontend')">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Deploy ── -->
+<div class="cmd-card">
+  <p class="cmd-card-header">&#128640; Deploy</p>
+  <div class="cmd-card-body">
+    <p class="cmd-desc">
+      Trigger a full deployment via GitHub Actions.
+      Builds backend + frontend images, runs migrations, and updates Cloud Run services.
+    </p>
+    <div class="cmd-block" style="margin-top:10px">
+      <pre id="cmd-deploy">gh workflow run deploy.yml --repo tokendad/CivicMirror</pre>
+      <button class="copy-btn" onclick="copyCmd('cmd-deploy')">Copy</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
