@@ -24,6 +24,8 @@ RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
 USER appuser
 
 ENV PORT=8080
+# Prevent Python from buffering stdout/stderr so logs appear in Cloud Logging immediately
+ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 CMD ["sh", "-c", "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} --access-logfile - --error-logfile -"]
