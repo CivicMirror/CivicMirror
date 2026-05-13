@@ -103,11 +103,15 @@ class Command(BaseCommand):
         Force Celery into eager (synchronous) mode for the duration of this
         process so that tasks queued with .delay() run inline — e.g. the
         sync_election_races sub-tasks fired by sync_elections.
+
+        Celery 5.x with Django settings integration ignores direct assignment
+        to app.conf — we must mutate django.conf.settings so that Celery's
+        lazy settings reader picks up the change.
         """
         try:
-            from config.celery import app as celery_app  # noqa: PLC0415
-            celery_app.conf.task_always_eager = True
-            celery_app.conf.task_eager_propagates = True
+            from django.conf import settings as django_settings  # noqa: PLC0415
+            django_settings.CELERY_TASK_ALWAYS_EAGER = True
+            django_settings.CELERY_TASK_EAGER_PROPAGATES = True
         except Exception:
             self.stdout.write(
                 self.style.WARNING(
