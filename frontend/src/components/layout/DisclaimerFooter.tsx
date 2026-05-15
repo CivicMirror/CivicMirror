@@ -19,6 +19,13 @@ function DisclaimerFooter() {
             do not represent official results.
           </Typography>
         </Box>
+        <Typography
+          color="text.secondary"
+          sx={{ mt: 1, textAlign: 'right' }}
+          variant="body2"
+        >
+          v{__APP_VERSION__}
+        </Typography>
       </Container>
     </Box>
   );
