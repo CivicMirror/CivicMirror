@@ -71,9 +71,19 @@ class RaceViewSet(viewsets.ReadOnlyModelViewSet):
             resolved_state = resolve_state_from_zip(zip_code)
             if not resolved_state:
                 return queryset.none()
+            state_lower = resolved_state.lower()
+            # Include races from national elections only when the race itself is
+            # truly national (no state component in its OCD ID) or belongs to the
+            # resolved state (OCD ID contains state:<xx>/ or ends with state:<xx>).
+            national_and_relevant = Q(
+                election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL
+            ) & (
+                ~Q(ocd_division_id__icontains='state:')
+                | Q(ocd_division_id__icontains=f'state:{state_lower}/')
+                | Q(ocd_division_id__iendswith=f'state:{state_lower}')
+            )
             queryset = queryset.filter(
-                Q(election__jurisdiction_level=Election.JurisdictionLevel.NATIONAL)
-                | Q(election__state=resolved_state)
+                Q(election__state=resolved_state) | national_and_relevant
             )
         elif scope == 'address':
             # Address-based geocoding is not yet implemented.

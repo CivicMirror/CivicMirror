@@ -300,6 +300,50 @@ def test_scope_zip_resolves_to_state_and_includes_national():
 
 
 @pytest.mark.django_db
+def test_scope_zip_excludes_state_specific_races_from_national_election():
+    """Races synced under a national election with a state-specific OCD ID must not
+    appear for ZIP codes outside that state, but must appear for ZIP codes within it."""
+    national_election = _make_election('nat-la', level=Election.JurisdictionLevel.NATIONAL)
+    la_county_race = Race.objects.create(
+        election=national_election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title='LA County Supervisor',
+        jurisdiction='Los Angeles County',
+        geography_scope='countywide',
+        ocd_division_id='ocd-division/country:us/state:ca/county:los_angeles',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+    ca_senate_race = Race.objects.create(
+        election=national_election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title='US Senate CA',
+        jurisdiction='California',
+        geography_scope='statewide',
+        ocd_division_id='ocd-division/country:us/state:ca',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+    presidential_race = _make_race(national_election, 'President')  # ocd_division_id=''
+
+    # ZIP 27601 is Raleigh, NC — LA county and CA senate races must not appear
+    nc_response = APIClient().get('/api/races/', {'scope': 'zip', 'zip': '27601'})
+    nc_ids = {r['id'] for r in nc_response.json()['results']}
+    assert la_county_race.id not in nc_ids
+    assert ca_senate_race.id not in nc_ids
+    assert presidential_race.id in nc_ids
+
+    # ZIP 90210 is Beverly Hills, CA — CA races must appear
+    ca_response = APIClient().get('/api/races/', {'scope': 'zip', 'zip': '90210'})
+    ca_ids = {r['id'] for r in ca_response.json()['results']}
+    assert la_county_race.id in ca_ids
+    assert ca_senate_race.id in ca_ids
+    assert presidential_race.id in ca_ids
+
+
+@pytest.mark.django_db
 def test_scope_zip_invalid_zip_returns_empty():
     _make_race(_make_election('nc-5', state='NC'), 'NC Governor')
 
