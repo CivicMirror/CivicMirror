@@ -65,6 +65,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'ops.middleware.RequestResponseLoggingMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -182,3 +183,43 @@ CIVIC_API_BASE = env('CIVIC_API_BASE', default='https://www.googleapis.com/civic
 CIVIC_HTTP_TIMEOUT_SECONDS = env.int('CIVIC_HTTP_TIMEOUT_SECONDS', default=10)
 CIVIC_MAX_RETRIES = env.int('CIVIC_MAX_RETRIES', default=3)
 CIVIC_RETRY_BACKOFF_SECONDS = env.float('CIVIC_RETRY_BACKOFF_SECONDS', default=1.0)
+
+_LOG_LEVEL = env('LOG_LEVEL', default='INFO')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'ops.logging.JsonFormatter',
+        },
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        # Suppress Django's own noisy request/security loggers; our middleware handles requests
+        'django': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+        'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
+        # CivicMirror application loggers
+        'civicmirror': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        # App-level loggers inherit from root unless overridden in dev
+        'ops': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        'elections': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        'accounts': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        'voting': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        'results': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+        'integrations': {'handlers': ['console'], 'level': _LOG_LEVEL, 'propagate': False},
+    },
+}
