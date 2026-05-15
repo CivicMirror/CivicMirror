@@ -150,7 +150,7 @@ function HomePage() {
               <Chip icon={<HowToVote />} label="Compare mock votes with official outcomes" />
             </Stack>
             <Box>
-              <Typography gutterBottom variant="h1">
+              <Typography gutterBottom variant="h1" sx={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)' }}>
                 See how your community would vote.
               </Typography>
               <Typography color="text.secondary" maxWidth={760} variant="h6">
