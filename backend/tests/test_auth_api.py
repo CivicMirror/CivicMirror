@@ -38,7 +38,7 @@ def test_registration_requires_active_terms(api_client):
         {
             "username": "sample_user",
             "password": "StrongPass123!",
-            "terms_version": "2025-01",
+            "terms_version": "9999-99",
             "terms_accepted": True,
         },
         format="json",

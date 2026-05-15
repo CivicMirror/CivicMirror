@@ -108,6 +108,7 @@ function RegisterPage() {
         us_state: 'us_state',
         gender: 'gender',
         terms_accepted: 'termsAccepted',
+        terms_version: 'termsAccepted',
       };
 
       Object.entries(fieldMap).forEach(([apiField, formField]) => {
