@@ -49,16 +49,41 @@ def test_sync_elections_creates_elections_and_queues_followups(settings):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     settings.CELERY_TASK_EAGER_PROPAGATES = True
     with patch("integrations.civic.tasks.CivicAPIClient.list_elections", return_value=[{
-        "source_id": "2000",
+        "source_id": "3500",
         "name": "Massachusetts General Election",
         "election_date": str(timezone.localdate() + timedelta(days=20)),
         "ocd_division_id": "ocd-division/country:us/state:ma",
     }]), patch("integrations.civic.tasks.sync_election_races.delay") as mocked_delay:
         result = sync_elections.apply().get()
 
-    assert Election.objects.filter(source_id="2000").exists()
+    assert Election.objects.filter(source_id="3500").exists()
     assert result["created"] == 1
     assert mocked_delay.call_count >= 1
+
+
+@pytest.mark.django_db
+def test_sync_elections_skips_vip_test_election(settings):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+    with patch("integrations.civic.tasks.CivicAPIClient.list_elections", return_value=[
+        {
+            "source_id": "2000",
+            "name": "VIP Test Election",
+            "election_date": "2031-12-06",
+            "ocd_division_id": "",
+        },
+        {
+            "source_id": "3501",
+            "name": "Oregon Primary",
+            "election_date": str(timezone.localdate() + timedelta(days=30)),
+            "ocd_division_id": "ocd-division/country:us/state:or",
+        },
+    ]), patch("integrations.civic.tasks.sync_election_races.delay"):
+        result = sync_elections.apply().get()
+
+    assert not Election.objects.filter(source_id="2000").exists(), "VIP test election must not be stored"
+    assert Election.objects.filter(source_id="3501").exists()
+    assert result["created"] == 1
 
 
 @pytest.mark.django_db

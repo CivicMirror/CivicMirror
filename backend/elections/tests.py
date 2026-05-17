@@ -271,6 +271,42 @@ def test_scope_state_returns_only_statewide_races_for_selected_state():
 
 
 @pytest.mark.django_db
+def test_scope_state_includes_district_scope_races():
+    """Civic API often returns geography_scope='district' for state-level contests
+    (congressional races, constitutional amendments). These must appear in state scope."""
+    nc_election = _make_election('nc-district', state='NC')
+    statewide_race = _make_race(nc_election, 'NC Governor')  # geography_scope='statewide'
+    district_race = Race.objects.create(
+        election=nc_election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title='U.S. Representative',
+        jurisdiction='North Carolina',
+        geography_scope='district',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+    city_race = Race.objects.create(
+        election=nc_election,
+        race_type=Race.RaceType.CANDIDATE,
+        office_title='Raleigh Mayor',
+        jurisdiction='Raleigh',
+        geography_scope='city',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+
+    response = APIClient().get('/api/races/', {'scope': 'state', 'state': 'NC'})
+
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert statewide_race.id in ids
+    assert district_race.id in ids
+    assert city_race.id not in ids
+
+
+@pytest.mark.django_db
 def test_scope_state_without_state_param_returns_empty():
     _make_race(_make_election('nc-3', state='NC'), 'NC Governor')
 

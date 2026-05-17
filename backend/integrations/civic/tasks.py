@@ -24,6 +24,9 @@ def _backoff(retry_count: int) -> int:
 
 _NATIONAL_SAMPLE_STATES = ["CA", "TX", "NY", "FL", "PA", "OH", "GA", "NC", "MI", "VA"]
 
+# Google's documented VIP test election ID — never real data, always LA test fixtures.
+_VIP_TEST_ELECTION_ID = "2000"
+
 
 def _representative_addresses_for_election(election: Election) -> list[dict]:
     if election.state and election.state in REPRESENTATIVE_ADDRESSES:
@@ -47,6 +50,9 @@ def sync_elections(self):
 
     try:
         for payload in client.list_elections():
+            if str(payload.get("source_id")) == _VIP_TEST_ELECTION_ID:
+                logger.debug("Skipping VIP test election (source_id=%s)", _VIP_TEST_ELECTION_ID)
+                continue
             mapped = map_election_payload(payload)
             source_id = mapped.pop('source_id')
             election, created = Election.objects.update_or_create(source_id=source_id, defaults=mapped)
