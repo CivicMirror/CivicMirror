@@ -62,7 +62,37 @@ class Command(BaseCommand):
         )
 
         if trigger_sync:
-            from integrations.civic.tasks import sync_elections  # noqa: PLC0415
-            self.stdout.write("Triggering sync_elections synchronously...")
-            result = sync_elections.apply().get()
-            self.stdout.write(self.style.SUCCESS(f"Sync complete: {result}"))
+            from integrations.civic.addresses import REPRESENTATIVE_ADDRESSES  # noqa: PLC0415
+            from integrations.civic.tasks import sync_election_races  # noqa: PLC0415
+
+            _NATIONAL_SAMPLE_STATES = ["CA", "TX", "NY", "FL", "PA", "OH", "GA", "NC", "MI", "VA"]
+
+            total_created = 0
+            total_updated = 0
+            for election in elections:
+                if election.state and election.state in REPRESENTATIVE_ADDRESSES:
+                    addrs = REPRESENTATIVE_ADDRESSES[election.state]
+                else:
+                    addrs = [
+                        addr
+                        for state in _NATIONAL_SAMPLE_STATES
+                        for addr in REPRESENTATIVE_ADDRESSES.get(state, [])[:1]
+                    ]
+                for addr in addrs:
+                    self.stdout.write(
+                        f"  Syncing [{election.pk}] {election.name} via {addr['label']}..."
+                    )
+                    result = sync_election_races.apply(
+                        args=[election.pk, addr['address'], addr['label']]
+                    ).get()
+                    total_created += result.get('created', 0)
+                    total_updated += result.get('updated', 0)
+                    self.stdout.write(
+                        f"    created={result.get('created', 0)} updated={result.get('updated', 0)}"
+                    )
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Sync complete: total created={total_created} updated={total_updated}"
+                )
+            )
