@@ -24,6 +24,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { getApiErrorMessage, getApiFieldErrors } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { COUNTRIES } from '../utils/countries';
 import { US_STATES } from '../utils/usStates';
 
 const CURRENT_TERMS_VERSION = '2025-01';
@@ -39,7 +40,7 @@ const registerSchema = z
       .regex(/[0-9]/, 'Password must include a number.'),
     confirmPassword: z.string(),
     age_range: z.string().optional(),
-    country: z.string().trim().max(80, 'Country must be 80 characters or fewer.').optional(),
+    country: z.string().max(2).optional(),
     us_state: z.string().optional(),
     gender: z.string().trim().max(50, 'Gender must be 50 characters or fewer.').optional(),
     termsAccepted: z.boolean().refine((value) => value, {
@@ -198,8 +199,16 @@ function RegisterPage() {
                       fullWidth
                       helperText={errors.country?.message}
                       label="Country"
+                      select
                       {...register('country')}
-                    />
+                    >
+                      <MenuItem value="">Prefer not to say</MenuItem>
+                      {COUNTRIES.map((c) => (
+                        <MenuItem key={c.code} value={c.code}>
+                          {c.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
 
                     <TextField
                       error={Boolean(errors.us_state)}
