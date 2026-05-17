@@ -111,6 +111,7 @@ def map_contest_to_race_defaults(election: Election, contest: dict) -> dict:
     vote_method = Race.VoteMethod.YES_NO if race_type == Race.RaceType.MEASURE else Race.VoteMethod.SINGLE_CHOICE
     return {
         "race_type": race_type,
+        "ballot_type": contest.get("type", ""),
         "office_title": office_title,
         "jurisdiction": extract_jurisdiction(contest),
         "geography_scope": extract_geography_scope(contest),

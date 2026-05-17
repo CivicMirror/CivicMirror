@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from elections.models import Candidate, Election, MeasureOption, Race
 from integrations.civic.cache import get_cache_key, get_race_ttl, races_are_fresh
+from integrations.civic.mappers import map_contest_to_race_defaults
 from integrations.civic.tasks import sync_election_races, sync_elections
 from ops.models import SyncLog
 
@@ -125,3 +126,43 @@ def test_sync_election_races_imports_candidate_and_measure_data(settings):
     assert Candidate.objects.count() == 2
     assert MeasureOption.objects.count() == 3
     assert SyncLog.objects.filter(task_name="sync_election_races", status=SyncLog.Status.COMPLETED).exists()
+    candidate_race = Race.objects.get(race_type=Race.RaceType.CANDIDATE)
+    measure_race = Race.objects.get(race_type=Race.RaceType.MEASURE)
+    assert candidate_race.ballot_type == "General"
+    assert measure_race.ballot_type == "Referendum"
+
+
+@pytest.mark.django_db
+def test_map_contest_ballot_type_stores_raw_type_value():
+    election = Election.objects.create(
+        name="Test Election",
+        election_date=timezone.localdate() + timedelta(days=10),
+        jurisdiction_level=Election.JurisdictionLevel.STATE,
+        state="MA",
+        source_id="bt-test",
+        status=Election.Status.UPCOMING,
+    )
+    for contest_type, expected in [("Primary", "Primary"), ("Run-off", "Run-off"), ("Retention", "Retention"), ("", "")]:
+        defaults = map_contest_to_race_defaults(election, {
+            "type": contest_type,
+            "office": "Governor",
+            "district": {"name": "Massachusetts", "scope": "statewide", "id": "ocd-division/country:us/state:ma"},
+        })
+        assert defaults["ballot_type"] == expected, f"Expected ballot_type={expected!r} for type={contest_type!r}"
+
+
+@pytest.mark.django_db
+def test_map_contest_ballot_type_absent_field_defaults_to_empty():
+    election = Election.objects.create(
+        name="Test Election",
+        election_date=timezone.localdate() + timedelta(days=10),
+        jurisdiction_level=Election.JurisdictionLevel.STATE,
+        state="MA",
+        source_id="bt-absent",
+        status=Election.Status.UPCOMING,
+    )
+    defaults = map_contest_to_race_defaults(election, {
+        "office": "Governor",
+        "district": {"name": "Massachusetts", "scope": "statewide", "id": "ocd-division/country:us/state:ma"},
+    })
+    assert defaults["ballot_type"] == ""

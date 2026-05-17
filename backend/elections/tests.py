@@ -437,3 +437,42 @@ def test_backward_compat_state_param_without_scope():
     ids = {r['id'] for r in response.json()['results']}
     assert nc_race.id in ids
     assert ga_race.id not in ids
+
+
+@pytest.mark.django_db
+def test_ballot_type_filter_returns_matching_races():
+    election = _make_election('bt-filter', state='LA')
+    referendum_race = Race.objects.create(
+        election=election,
+        race_type=Race.RaceType.MEASURE,
+        ballot_type='Referendum',
+        office_title='Proposition 1',
+        jurisdiction='statewide',
+        geography_scope='statewide',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.YES_NO,
+    )
+    general_race = Race.objects.create(
+        election=election,
+        race_type=Race.RaceType.CANDIDATE,
+        ballot_type='General',
+        office_title='Governor',
+        jurisdiction='statewide',
+        geography_scope='statewide',
+        source=Race.Source.CIVIC_API,
+        race_status=Race.RaceStatus.ACTIVE,
+        vote_method=Race.VoteMethod.SINGLE_CHOICE,
+    )
+
+    response = APIClient().get('/api/races/', {'scope': 'state', 'state': 'LA', 'ballot_type': 'Referendum'})
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert referendum_race.id in ids
+    assert general_race.id not in ids
+
+    response = APIClient().get('/api/races/', {'scope': 'state', 'state': 'LA', 'ballot_type': 'General'})
+    assert response.status_code == 200
+    ids = {r['id'] for r in response.json()['results']}
+    assert general_race.id in ids
+    assert referendum_race.id not in ids

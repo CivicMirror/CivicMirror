@@ -96,6 +96,7 @@ export interface Race {
   id: number;
   election: Election;
   race_type: 'candidate' | 'measure';
+  ballot_type: string;
   office_title: string;
   jurisdiction: string;
   geography_scope: string;
@@ -150,6 +151,7 @@ export interface RaceListParams {
   address?: string | null;
   electionId?: number | null;
   certificationStatus?: string | null;
+  contestType?: string | null;
   page?: number;
 }
 

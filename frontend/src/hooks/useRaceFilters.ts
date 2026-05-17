@@ -42,6 +42,7 @@ export const useRaceFilters = () => {
     const stateParam = searchParams.get('state')?.toUpperCase() ?? null;
     const zipParam = searchParams.get('zip');
     const addressParam = searchParams.get('address');
+    const contestTypeParam = searchParams.get('contestType');
 
     if (scopeParam && VALID_SCOPES.has(scopeParam) && scopeParam !== f.scope) {
       f.setScope(scopeParam as typeof f.scope);
@@ -83,6 +84,10 @@ export const useRaceFilters = () => {
     if (nextElectionId !== f.electionId) {
       f.setElectionId(nextElectionId);
     }
+
+    if (contestTypeParam !== f.contestType) {
+      f.setContestType(contestTypeParam);
+    }
   }, [searchParams]); // only URL changes drive URL→Store sync
 
   // Store → URL: only re-runs when store fields change, reads URL via ref.
@@ -111,10 +116,14 @@ export const useRaceFilters = () => {
       next.set('electionId', String(filters.electionId));
     }
 
+    if (filters.contestType != null) {
+      next.set('contestType', filters.contestType);
+    }
+
     if (next.toString() !== searchParamsRef.current.toString()) {
       setSearchParamsRef.current(next, { replace: true });
     }
-  }, [filters.address, filters.electionId, filters.scope, filters.state, filters.zip]); // only store changes drive Store→URL sync
+  }, [filters.address, filters.contestType, filters.electionId, filters.scope, filters.state, filters.zip]); // only store changes drive Store→URL sync
 
   const activeLocationLabel = useMemo(() => {
     if (resolvedScope === 'state' && effectiveState) {

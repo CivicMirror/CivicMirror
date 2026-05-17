@@ -9,12 +9,14 @@ export interface RaceFiltersState {
   address: string | null;
   electionId: number | null;
   detectedState: string | null;
+  contestType: string | null;
   setScope: (scope: RaceFilterScope) => void;
   setState: (state: string | null) => void;
   setZip: (zip: string | null) => void;
   setAddress: (address: string | null) => void;
   setElectionId: (id: number | null) => void;
   setDetectedState: (state: string | null) => void;
+  setContestType: (type: string | null) => void;
   clearLocationPreference: () => void;
 }
 
@@ -26,6 +28,7 @@ interface PersistedLocationPreference {
   zip: string | null;
   address: string | null;
   electionId: number | null;
+  contestType: string | null;
 }
 
 const defaultState: PersistedLocationPreference = {
@@ -34,6 +37,7 @@ const defaultState: PersistedLocationPreference = {
   zip: null,
   address: null,
   electionId: null,
+  contestType: null,
 };
 
 const readPersistedLocation = (): PersistedLocationPreference => {
@@ -75,6 +79,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         zip: next.zip,
         address: next.address,
         electionId: next.electionId,
+        contestType: next.contestType,
       });
       return { scope };
     });
@@ -87,6 +92,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         zip: null,
         address: null,
         electionId: current.electionId,
+        contestType: current.contestType,
       };
       persistLocation(next);
       return { ...next };
@@ -100,6 +106,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         zip,
         address: null,
         electionId: current.electionId,
+        contestType: current.contestType,
       };
       persistLocation(next);
       return { ...next };
@@ -113,6 +120,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         zip: null,
         address,
         electionId: current.electionId,
+        contestType: current.contestType,
       };
       persistLocation(next);
       return { ...next };
@@ -126,9 +134,24 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         zip: current.zip,
         address: current.address,
         electionId: id,
+        contestType: current.contestType,
       };
       persistLocation(next);
       return { electionId: id };
+    });
+  },
+  setContestType(contestType) {
+    set((current) => {
+      const next: PersistedLocationPreference = {
+        scope: current.scope,
+        state: current.state,
+        zip: current.zip,
+        address: current.address,
+        electionId: current.electionId,
+        contestType,
+      };
+      persistLocation(next);
+      return { contestType };
     });
   },
   setDetectedState(state) {

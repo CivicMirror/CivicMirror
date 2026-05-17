@@ -40,15 +40,28 @@ const normalizeRace = (race: RawRace): Race => ({
   mock_tally: race.mock_tally ?? race.tally ?? race.mock_results,
 });
 
-const mapQueryParams = (params: RaceListParams = {}) => ({
-  scope: params.scope,
-  state: params.state ?? undefined,
-  zip: params.zip ?? undefined,
-  address: params.address ?? undefined,
-  election_id: params.electionId ?? undefined,
-  certification_status: params.certificationStatus ?? undefined,
-  page: params.page ?? undefined,
-});
+const mapQueryParams = (params: RaceListParams = {}) => {
+  const { contestType } = params;
+
+  // "candidate" / "measure" map to the race_type filter.
+  // Known election sub-types (General, Primary, Run-off, Retention) map to ballot_type.
+  const RACE_TYPE_VALUES = new Set(['candidate', 'measure']);
+  const raceType = contestType && RACE_TYPE_VALUES.has(contestType) ? contestType : undefined;
+  const ballotType =
+    contestType && !RACE_TYPE_VALUES.has(contestType) ? contestType : undefined;
+
+  return {
+    scope: params.scope,
+    state: params.state ?? undefined,
+    zip: params.zip ?? undefined,
+    address: params.address ?? undefined,
+    election_id: params.electionId ?? undefined,
+    certification_status: params.certificationStatus ?? undefined,
+    race_type: raceType,
+    ballot_type: ballotType,
+    page: params.page ?? undefined,
+  };
+};
 
 export const raceApi = {
   async list(params: RaceListParams = {}) {

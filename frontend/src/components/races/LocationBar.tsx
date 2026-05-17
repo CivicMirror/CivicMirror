@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRaceFiltersStore, type RaceFilterScope } from '../../store/raceFiltersStore';
 import { formatStateName } from '../../utils/format';
 import { US_STATES } from '../../utils/usStates';
+import ContestTypeFilter from './ContestTypeFilter';
 
 interface LocationBarProps {
   resolvedScope: RaceFilterScope;
@@ -226,6 +227,8 @@ function LocationBar({
           ) : null}
         </Stack>
       </Box>
+
+      <ContestTypeFilter />
 
       {isAutoDetected ? (
         <Alert severity="info">We auto-detected your state from IP geolocation. Change it anytime.</Alert>

@@ -38,6 +38,7 @@ function HomePage() {
   } = useRaceFilters();
 
   const setElectionId = useRaceFiltersStore((state) => state.setElectionId);
+  const contestType = useRaceFiltersStore((state) => state.contestType);
 
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
@@ -47,7 +48,7 @@ function HomePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [address, effectiveState, electionId, resolvedScope, zip]);
+  }, [address, contestType, effectiveState, electionId, resolvedScope, zip]);
 
   const hasIncompleteLocation =
     (resolvedScope === 'state' && !effectiveState) ||
@@ -72,6 +73,7 @@ function HomePage() {
         zip: resolvedScope === 'zip' ? zip : null,
         address: resolvedScope === 'address' ? address : null,
         electionId,
+        contestType,
         page,
       })
       .then((response) => {
@@ -93,7 +95,7 @@ function HomePage() {
     return () => {
       isActive = false;
     };
-  }, [address, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, zip]);
+  }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, zip]);
 
   const elections = useMemo(() => {
     const byId = new Map<number, Election>();

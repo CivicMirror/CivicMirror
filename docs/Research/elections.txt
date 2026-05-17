@@ -1,0 +1,65 @@
+{
+  "elections": [
+    {
+      "id": "2000",
+      "name": "VIP Test Election",
+      "electionDay": "2031-12-06",
+      "ocdDivisionId": "ocd-division/country:us"
+    },
+    {
+      "id": "9463",
+      "name": "Oregon Primary Election",
+      "electionDay": "2026-05-19",
+      "ocdDivisionId": "ocd-division/country:us/state:or"
+    },
+    {
+      "id": "9471",
+      "name": "South Carolina Primary Election",
+      "electionDay": "2026-06-09",
+      "ocdDivisionId": "ocd-division/country:us/state:sc"
+    },
+    {
+      "id": "9484",
+      "name": "Montana Primary Election",
+      "electionDay": "2026-06-02",
+      "ocdDivisionId": "ocd-division/country:us/state:mt"
+    },
+    {
+      "id": "9504",
+      "name": "Pennsylvania Primary Election",
+      "electionDay": "2026-05-19",
+      "ocdDivisionId": "ocd-division/country:us/state:pa"
+    },
+    {
+      "id": "9511",
+      "name": "Idaho Primary Election",
+      "electionDay": "2026-05-19",
+      "ocdDivisionId": "ocd-division/country:us/state:id"
+    },
+    {
+      "id": "9530",
+      "name": "Louisiana Party and Municipal Primary Election",
+      "electionDay": "2026-05-16",
+      "ocdDivisionId": "ocd-division/country:us/state:la"
+    },
+    {
+      "id": "11098",
+      "name": "Texas Democratic Primary Runoff Election",
+      "electionDay": "2026-05-26",
+      "ocdDivisionId": "ocd-division/country:us/state:tx"
+    },
+    {
+      "id": "11255",
+      "name": "California Primary Election",
+      "electionDay": "2026-06-02",
+      "ocdDivisionId": "ocd-division/country:us/state:ca"
+    },
+    {
+      "id": "11256",
+      "name": "Texas Republican Primary Runoff Election",
+      "electionDay": "2026-05-26",
+      "ocdDivisionId": "ocd-division/country:us/state:tx"
+    }
+  ],
+  "kind": "civicinfo#electionsQueryResponse"
+}

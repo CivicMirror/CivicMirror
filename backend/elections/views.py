@@ -40,7 +40,7 @@ class ElectionViewSet(viewsets.ReadOnlyModelViewSet):
 class RaceViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RaceSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['race_type', 'source', 'race_status', 'certification_status', 'geography_scope', 'election']
+    filterset_fields = ['race_type', 'source', 'race_status', 'certification_status', 'geography_scope', 'election', 'ballot_type']
     search_fields = ['office_title', 'jurisdiction', 'canonical_key', 'ocd_division_id']
     ordering_fields = ['office_title', 'last_synced_at']
     ordering = ['office_title']
