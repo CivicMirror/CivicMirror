@@ -11,6 +11,8 @@ const KNOWN_TYPES: Record<string, { label: string; color: ChipColor }> = {
   primary: { label: 'Primary', color: 'info' },
   'run-off': { label: 'Run-off', color: 'warning' },
   referendum: { label: 'Ballot Measure', color: 'success' },
+  // Civic API returns 'ballot-measure' in practice (undocumented kebab form)
+  'ballot-measure': { label: 'Ballot Measure', color: 'success' },
   retention: { label: 'Retention Vote', color: 'secondary' },
 };
 
