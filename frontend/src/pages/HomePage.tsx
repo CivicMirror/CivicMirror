@@ -1,12 +1,9 @@
-import HowToVote from '@mui/icons-material/HowToVote';
-import Public from '@mui/icons-material/Public';
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   FormControl,
   InputLabel,
   MenuItem,
@@ -145,10 +142,7 @@ function HomePage() {
       <Card>
         <CardContent sx={{ p: { xs: 3, md: 5 } }}>
           <Stack spacing={2.5}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-              <Chip color="primary" icon={<Public />} label="Public browsing works without auth" variant="filled" />
-              <Chip icon={<HowToVote />} label="Compare mock votes with official outcomes" />
-            </Stack>
+
             <Box>
               <Typography gutterBottom variant="h1" sx={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)' }}>
                 See how your community would vote.
