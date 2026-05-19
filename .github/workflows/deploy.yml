@@ -137,6 +137,8 @@ jobs:
             ${{ env.AR_BASE }}/frontend:latest
           build-args: |
             VITE_API_URL=https://api.civicmirror.welshrd.com
+            VITE_CIVIC_API_URL=https://civicmirror-backend-866677508588.us-central1.run.app
+            VITE_CIVIC_API_KEY=${{ secrets.VITE_CIVIC_API_KEY }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
