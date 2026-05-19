@@ -45,10 +45,9 @@ def check_openelections_all_states():
 
 
 app.conf.beat_schedule = {
-    'sync-elections-hourly': {
-        'task': 'integrations.civic.tasks.sync_elections',
-        'schedule': crontab(minute=0),
-    },
+    # NOTE: sync-elections-hourly removed — election data is now served by the
+    # dedicated CivicMirror-API (civicmirror-worker). The integrations.civic
+    # module is retained for reference but is no longer scheduled.
     'cleanup-expired-knox-tokens-daily': {
         'task': 'accounts.tasks.cleanup_expired_tokens',
         'schedule': crontab(minute=0, hour=0),
