@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { raceApi } from '../api/elections';
+import { civicElectionsApi } from '../api/civicElections';
 import { getApiErrorMessage } from '../api/client';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LocationBar from '../components/races/LocationBar';
@@ -23,6 +24,7 @@ import { useRaceFilters } from '../hooks/useRaceFilters';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import type { Election, PaginatedResponse, Race } from '../types';
 import { formatStateName } from '../utils/format';
+import { electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
 
 function HomePage() {
   useIPGeolocation();
@@ -43,6 +45,8 @@ function HomePage() {
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
   const [data, setData] = useState<PaginatedResponse<Race> | null>(null);
+  // elections derived from lookup response (ZIP scope) or from race data (other scopes)
+  const [lookupElections, setLookupElections] = useState<Election[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +63,7 @@ function HomePage() {
     if (hasIncompleteLocation) {
       setLoading(false);
       setData(null);
+      setLookupElections(null);
       return;
     }
 
@@ -66,31 +71,59 @@ function HomePage() {
     setLoading(true);
     setError(null);
 
-    void raceApi
-      .list({
-        scope: resolvedScope,
-        state: resolvedScope === 'state' ? effectiveState : null,
-        zip: resolvedScope === 'zip' ? zip : null,
-        address: resolvedScope === 'address' ? address : null,
-        electionId,
-        contestType,
-        page,
-      })
-      .then((response) => {
-        if (isActive) {
-          setData(response);
-        }
-      })
-      .catch((requestError) => {
-        if (isActive) {
-          setError(getApiErrorMessage(requestError, 'We could not load races right now.'));
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false);
-        }
-      });
+    if (resolvedScope === 'zip' && zip) {
+      // ZIP scope — use the CivicMirror-API lookup endpoint.
+      // The lookup endpoint returns full race detail (candidates + measure_options) for all active
+      // elections in the state. We apply contestType filtering and pagination client-side.
+      void civicElectionsApi
+        .lookup(zip, electionId ?? undefined)
+        .then((results) => {
+          if (!isActive) return;
+          setLookupElections(electionsFromLookup(results));
+          setData(lookupResultsToLegacyPaged(results, page, contestType));
+        })
+        .catch((requestError: unknown) => {
+          if (isActive) {
+            setError(
+              requestError instanceof Error
+                ? requestError.message
+                : 'We could not load races right now.',
+            );
+          }
+        })
+        .finally(() => {
+          if (isActive) setLoading(false);
+        });
+    } else {
+      // State / national / address scopes — continue using the embedded backend.
+      // These will be migrated to the new API in a subsequent phase.
+      setLookupElections(null);
+      void raceApi
+        .list({
+          scope: resolvedScope,
+          state: resolvedScope === 'state' ? effectiveState : null,
+          zip: null,
+          address: resolvedScope === 'address' ? address : null,
+          electionId,
+          contestType,
+          page,
+        })
+        .then((response) => {
+          if (isActive) {
+            setData(response);
+          }
+        })
+        .catch((requestError) => {
+          if (isActive) {
+            setError(getApiErrorMessage(requestError, 'We could not load races right now.'));
+          }
+        })
+        .finally(() => {
+          if (isActive) {
+            setLoading(false);
+          }
+        });
+    }
 
     return () => {
       isActive = false;
@@ -98,6 +131,9 @@ function HomePage() {
   }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, zip]);
 
   const elections = useMemo(() => {
+    // For ZIP scope, elections come from the lookup response directly.
+    // For other scopes they are derived from the race data returned by the embedded backend.
+    if (lookupElections) return lookupElections;
     const byId = new Map<number, Election>();
     data?.results.forEach((race) => {
       byId.set(race.election.id, race.election);
@@ -105,7 +141,7 @@ function HomePage() {
     return [...byId.values()].sort((left, right) =>
       left.election_date.localeCompare(right.election_date),
     );
-  }, [data]);
+  }, [data, lookupElections]);
 
   const heading = useMemo(() => {
     if (resolvedScope === 'state' && effectiveState) {

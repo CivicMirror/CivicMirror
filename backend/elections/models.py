@@ -141,6 +141,11 @@ class Race(models.Model):
         default=MatchConfidence.VERIFIED,
         blank=True,
     )
+    # FK to the same race in the CivicMirror-API service (civicmirror-worker).
+    # Populated by the sync_external_race_ids management command.
+    # Voting endpoints accept this as an alternative lookup key so the
+    # frontend can link new-API race IDs to user votes stored here.
+    external_race_id = models.IntegerField(null=True, blank=True, unique=True, db_index=True)
 
     objects = models.Manager()
     public_objects = PublicRaceManager()

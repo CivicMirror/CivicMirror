@@ -24,6 +24,10 @@ class VotingAPIView(APIView):
 
 
 class RaceVoteCreateAPIView(VotingAPIView):
+    def _get_race(self, pk: int) -> Race | None:
+        """Return a locked Race by primary key, or None."""
+        return Race.objects.select_for_update().filter(pk=pk).first()
+
     def post(self, request, pk: int):
         if not request.user or not request.user.is_authenticated:
             return self.error_response('not_authenticated', 'Authentication credentials were not provided.', status.HTTP_401_UNAUTHORIZED)
@@ -84,3 +88,19 @@ class MyVoteHistoryAPIView(VotingAPIView):
 
         queryset = MockVote.objects.select_related('race', 'race__election', 'candidate', 'measure_option').filter(user=request.user)
         return Response(VoteHistorySerializer(queryset, many=True).data, status=status.HTTP_200_OK)
+
+
+class ExternalRaceVoteCreateAPIView(RaceVoteCreateAPIView):
+    """Cast a vote by CivicMirror-API race ID (external_race_id)."""
+
+    def post(self, request, external_id: int):
+        race = get_object_or_404(Race, external_race_id=external_id)
+        return super().post(request, pk=race.pk)
+
+
+class ExternalRaceTallyAPIView(RaceTallyAPIView):
+    """Retrieve vote tally by CivicMirror-API race ID (external_race_id)."""
+
+    def get(self, request, external_id: int):
+        race = get_object_or_404(Race, external_race_id=external_id)
+        return super().get(request, pk=race.pk)

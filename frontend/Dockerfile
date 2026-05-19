@@ -6,6 +6,10 @@ RUN npm ci --prefer-offline
 COPY . .
 ARG VITE_API_URL=https://api.civicmirror.welshrd.com
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_CIVIC_API_URL=https://civicmirror-backend-866677508588.us-central1.run.app
+ENV VITE_CIVIC_API_URL=$VITE_CIVIC_API_URL
+ARG VITE_CIVIC_API_KEY=
+ENV VITE_CIVIC_API_KEY=$VITE_CIVIC_API_KEY
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
