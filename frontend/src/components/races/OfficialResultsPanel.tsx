@@ -13,15 +13,22 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { getApiErrorMessage } from '../../api/client';
+import { civicElectionsApi } from '../../api/civicElections';
 import { getRaceOfficialResults } from '../../api/elections';
 import { votingApi } from '../../api/voting';
 import type { OfficialResultRow, OfficialResultsResponse, TallyResponse } from '../../types';
+import type { CivicRaceDetail } from '../../types/civicApi';
 import { formatPercent } from '../../utils/format';
+import { civicResultsToLegacyResponse } from '../../utils/civicRaceAdapter';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 interface OfficialResultsPanelProps {
   raceId: number;
   certificationStatus: string;
+  /** Provide this when the race was fetched from the CivicMirror-API (new path).
+   *  When present, official results and mock tally are fetched via the new API
+   *  and external voting endpoints respectively. */
+  civicRaceDetail?: CivicRaceDetail;
 }
 
 interface ComparisonRow {
@@ -90,7 +97,7 @@ const getSourceDomain = (url: string) => {
   }
 };
 
-function OfficialResultsPanel({ raceId, certificationStatus }: OfficialResultsPanelProps) {
+function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: OfficialResultsPanelProps) {
   const [officialResults, setOfficialResults] = useState<OfficialResultsResponse | null>(null);
   const [mockTally, setMockTally] = useState<TallyResponse | null>(null);
   const [loading, setLoading] = useState(certificationStatus !== 'upcoming');
@@ -111,10 +118,20 @@ function OfficialResultsPanel({ raceId, certificationStatus }: OfficialResultsPa
     setOfficialResults(null);
     setMockTally(null);
 
-    const mockTallyRequest =
-      certificationStatus === 'results_pending' ? Promise.resolve<TallyResponse | null>(null) : votingApi.getRaceTally(raceId);
+    const officialResultsRequest = civicRaceDetail
+      ? civicElectionsApi
+          .getRaceResults(raceId)
+          .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail))
+      : getRaceOfficialResults(raceId);
 
-    void Promise.allSettled([getRaceOfficialResults(raceId), mockTallyRequest])
+    const mockTallyRequest =
+      certificationStatus === 'results_pending'
+        ? Promise.resolve<TallyResponse | null>(null)
+        : civicRaceDetail
+          ? votingApi.getRaceTallyByExternalId(raceId)
+          : votingApi.getRaceTally(raceId);
+
+    void Promise.allSettled([officialResultsRequest, mockTallyRequest])
       .then(([officialResponse, mockTallyResponse]) => {
         if (!isActive) {
           return;
@@ -139,7 +156,7 @@ function OfficialResultsPanel({ raceId, certificationStatus }: OfficialResultsPa
     return () => {
       isActive = false;
     };
-  }, [certificationStatus, raceId]);
+  }, [certificationStatus, civicRaceDetail, raceId]);
 
   const effectiveCertificationStatus = officialResults?.certification_status ?? certificationStatus;
   const rows = officialResults?.results ?? [];

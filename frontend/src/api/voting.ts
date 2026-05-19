@@ -34,6 +34,13 @@ export const votingApi = {
     const response = await apiClient.post<VoteResponse>(`/api/races/${raceId}/vote/`, payload);
     return response.data;
   },
+  async postVoteByExternalId(externalRaceId: number, payload: VotePayload) {
+    const response = await apiClient.post<VoteResponse>(
+      `/api/races/ext/${externalRaceId}/vote/`,
+      payload,
+    );
+    return response.data;
+  },
   async getRaceTally(raceId: number) {
     try {
       const response = await apiClient.get<TallyResponse>(`/api/races/${raceId}/tally/`);
@@ -41,6 +48,16 @@ export const votingApi = {
     } catch {
       const race = await raceApi.detail(raceId);
       return buildFallbackTally(race);
+    }
+  },
+  async getRaceTallyByExternalId(externalRaceId: number): Promise<TallyResponse | null> {
+    try {
+      const response = await apiClient.get<TallyResponse>(
+        `/api/races/ext/${externalRaceId}/tally/`,
+      );
+      return response.data;
+    } catch {
+      return null;
     }
   },
   async getMyVotes() {

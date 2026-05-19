@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { getApiErrorMessage } from '../api/client';
-import { raceApi } from '../api/elections';
+import { civicElectionsApi } from '../api/civicElections';
 import { votingApi } from '../api/voting';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -24,19 +24,21 @@ import OfficialResultsPanel from '../components/races/OfficialResultsPanel';
 import StatusChip from '../components/races/StatusChip';
 import TallyBars from '../components/races/TallyBars';
 import { useAuth } from '../hooks/useAuth';
-import type { Race, TallyResponse, VoteChoice, VoteResponse } from '../types';
+import type { CivicRaceDetail } from '../types/civicApi';
+import type { Race, TallyResponse, VoteChoice, VotePayload, VoteResponse } from '../types';
 import {
   buildRaceTallyResponse,
   formatCompactNumber,
   formatDate,
-  formatDateTime,
   formatRaceSource,
   getRaceDisplayStatus,
 } from '../utils/format';
+import { civicRaceDetailToLegacy } from '../utils/civicRaceAdapter';
 
 function RaceDetailPage() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
+  const [civicDetail, setCivicDetail] = useState<CivicRaceDetail | null>(null);
   const [race, setRace] = useState<Race | null>(null);
   const [tally, setTally] = useState<TallyResponse | null>(null);
   const [recordedChoice, setRecordedChoice] = useState<VoteChoice | null>(null);
@@ -55,51 +57,41 @@ function RaceDetailPage() {
     setLoading(true);
     setError(null);
 
-    void Promise.all([raceApi.detail(raceId), votingApi.getRaceTally(raceId)])
-      .then(([raceResponse, tallyResponse]) => {
-        if (!isActive) {
-          return;
-        }
+    void (async () => {
+      try {
+        // Phase 1: fetch race detail to get election FK
+        const detail = await civicElectionsApi.getRaceDetail(raceId);
+        if (!isActive) return;
 
-        setRace(raceResponse);
-        setTally(tallyResponse);
-        setRecordedChoice(raceResponse.viewer_choice ?? null);
+        // Phase 2: fetch election and tally concurrently
+        const [election, tallyResponse] = await Promise.all([
+          civicElectionsApi.getElection(detail.election),
+          votingApi.getRaceTallyByExternalId(raceId),
+        ]);
+        if (!isActive) return;
 
-        if (isAuthenticated && raceResponse.viewer_has_voted && !raceResponse.viewer_choice) {
-          void votingApi
-            .getMyVotes()
-            .then((votes) => {
-              if (!isActive) {
-                return;
-              }
-
-              const matchingVote = votes.find((vote) => vote.race_id === raceResponse.id);
-              setRecordedChoice(matchingVote?.choice ?? null);
-            })
-            .catch(() => undefined);
-        }
-      })
-      .catch((requestError) => {
+        setCivicDetail(detail);
+        setRace(civicRaceDetailToLegacy(detail, election));
+        if (tallyResponse) setTally(tallyResponse);
+      } catch (requestError) {
         if (isActive) {
           setError(getApiErrorMessage(requestError, 'We could not load this race right now.'));
         }
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false);
-        }
-      });
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    })();
 
     return () => {
       isActive = false;
     };
-  }, [id, isAuthenticated]);
+  }, [id]);
 
   if (loading) {
     return <LoadingSpinner message="Loading race details…" />;
   }
 
-  if (error || !race) {
+  if (error || !race || !civicDetail) {
     return (
       <ErrorMessage
         action={
@@ -126,6 +118,8 @@ function RaceDetailPage() {
         ? 'Voting is closed for this race, but the public tally remains visible.'
         : 'This race is not currently accepting votes.';
 
+  const raceId = Number(id);
+
   const handleVoteSuccess = (_vote: VoteResponse, choice: VoteChoice) => {
     setRecordedChoice(choice);
     setRace((currentRace) =>
@@ -140,10 +134,13 @@ function RaceDetailPage() {
     );
 
     void votingApi
-      .getRaceTally(race.id)
-      .then((nextTally) => setTally(nextTally))
+      .getRaceTallyByExternalId(raceId)
+      .then((nextTally) => { if (nextTally) setTally(nextTally); })
       .catch(() => undefined);
   };
+
+  const handleSubmitVote = (payload: VotePayload): Promise<VoteResponse> =>
+    votingApi.postVoteByExternalId(raceId, payload);
 
   return (
     <Stack spacing={3}>
@@ -181,7 +178,9 @@ function RaceDetailPage() {
                 {formatCompactNumber(tallySnapshot.total_votes)} mock votes cast so far.
               </Alert>
               <Alert severity={raceDisplayStatus === 'active' ? 'success' : 'warning'} sx={{ flex: 1 }}>
-                Voting window: {formatDateTime(race.voting_opens)} → {formatDateTime(race.voting_closes)}
+                {raceDisplayStatus === 'active'
+                  ? 'This race is currently accepting mock votes.'
+                  : 'This race is not currently accepting mock votes.'}
               </Alert>
             </Stack>
           </Stack>
@@ -191,7 +190,12 @@ function RaceDetailPage() {
       {hasVoted ? (
         <AlreadyVotedPanel choice={recordedChoice ?? race.viewer_choice ?? null} />
       ) : canVote ? (
-        <BallotCard onVoteSuccess={handleVoteSuccess} race={race} tally={tallySnapshot} />
+        <BallotCard
+          onSubmitVote={handleSubmitVote}
+          onVoteSuccess={handleVoteSuccess}
+          race={race}
+          tally={tallySnapshot}
+        />
       ) : !isAuthenticated ? (
         <Card>
           <CardContent sx={{ p: { xs: 3, md: 4 } }}>
@@ -232,7 +236,11 @@ function RaceDetailPage() {
             <Stack spacing={2.5}>
               <Divider />
               <Typography variant="h5">Official Results</Typography>
-              <OfficialResultsPanel certificationStatus={race.certification_status} raceId={race.id} />
+              <OfficialResultsPanel
+                certificationStatus={race.certification_status}
+                civicRaceDetail={civicDetail}
+                raceId={raceId}
+              />
             </Stack>
           </CardContent>
         </Card>

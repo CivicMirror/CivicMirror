@@ -1,5 +1,5 @@
-import type { Candidate, Election, MeasureOption, PaginatedResponse, Race } from '../types/api';
-import type { CivicElection, CivicLookupResult, CivicRaceDetail } from '../types/civicApi';
+import type { Candidate, Election, MeasureOption, OfficialResultRow, OfficialResultsResponse, PaginatedResponse, Race } from '../types/api';
+import type { CivicElection, CivicLookupResult, CivicOfficialResult, CivicRaceDetail } from '../types/civicApi';
 
 const PAGE_SIZE = 25;
 
@@ -51,6 +51,8 @@ function civicRaceDetailToLegacy(race: CivicRaceDetail, election: CivicElection)
   };
 }
 
+export { civicRaceDetailToLegacy };
+
 function matchesContestType(race: Race, contestType: string | null | undefined): boolean {
   if (!contestType) return true;
   const RACE_TYPE_VALUES = new Set(['candidate', 'measure']);
@@ -99,4 +101,40 @@ export function electionsFromLookup(results: CivicLookupResult[]): Election[] {
     }
   }
   return [...seen.values()].sort((a, b) => a.election_date.localeCompare(b.election_date));
+}
+
+/**
+ * Converts a CivicMirror-API results response into the OfficialResultsResponse
+ * shape expected by OfficialResultsPanel. Candidate/measure-option PKs are
+ * resolved to display names using the race detail object.
+ */
+export function civicResultsToLegacyResponse(
+  results: CivicOfficialResult[],
+  detail: CivicRaceDetail,
+): OfficialResultsResponse {
+  const candidateById = new Map(detail.candidates.map((c) => [c.id, c.name]));
+  const measureOptionById = new Map(detail.measure_options.map((m) => [m.id, m.option_label]));
+
+  const rows: OfficialResultRow[] = results.map((row) => ({
+    id: row.id,
+    candidate_name: row.candidate !== null ? (candidateById.get(row.candidate) ?? null) : null,
+    option_label:
+      row.measure_option !== null ? (measureOptionById.get(row.measure_option) ?? null) : null,
+    vote_count: row.vote_count,
+    vote_pct: row.vote_pct !== null ? parseFloat(row.vote_pct) : null,
+    is_winner: row.is_winner,
+    result_type: row.result_type,
+    certified_at: row.certified_at,
+    source_url: row.source_url,
+    round_number: row.round_number,
+    is_write_in_aggregate: row.is_write_in_aggregate,
+    jurisdiction_fragment: row.jurisdiction_fragment,
+  }));
+
+  return {
+    race_id: detail.id,
+    certification_status: detail.certification_status,
+    source_url: results[0]?.source_url ?? '',
+    results: rows,
+  };
 }

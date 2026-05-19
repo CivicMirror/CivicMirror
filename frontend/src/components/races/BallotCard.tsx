@@ -24,12 +24,14 @@ import {
 import { useMemo, useState } from 'react';
 import { getApiErrorMessage } from '../../api/client';
 import { votingApi } from '../../api/voting';
-import type { Race, TallyResponse, VoteChoice, VoteErrorCode, VoteErrorResponse, VoteResponse } from '../../types';
+import type { Race, TallyResponse, VoteChoice, VoteErrorCode, VoteErrorResponse, VotePayload, VoteResponse } from '../../types';
 
 interface BallotCardProps {
   race: Race;
   tally: TallyResponse;
   onVoteSuccess: (vote: VoteResponse, choice: VoteChoice) => void;
+  /** Optional override for posting the vote. Defaults to votingApi.postVote(race.id). */
+  onSubmitVote?: (payload: VotePayload) => Promise<VoteResponse>;
 }
 
 const FRIENDLY_VOTE_ERRORS: Partial<Record<VoteErrorCode, string>> = {
@@ -53,7 +55,7 @@ const getVoteErrorMessage = (error: unknown) => {
   return getApiErrorMessage(error, 'We could not record your vote right now.');
 };
 
-function BallotCard({ race, tally, onVoteSuccess }: BallotCardProps) {
+function BallotCard({ race, tally, onVoteSuccess, onSubmitVote }: BallotCardProps) {
   const [selectedValue, setSelectedValue] = useState('');
   const [writeInValue, setWriteInValue] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -140,12 +142,18 @@ function BallotCard({ race, tally, onVoteSuccess }: BallotCardProps) {
     setError(null);
 
     try {
-      const vote = await votingApi.postVote(
-        race.id,
-        selectedChoice.type === 'candidate'
-          ? { candidate_id: selectedChoice.id }
-          : { measure_option_id: selectedChoice.id },
-      );
+      const vote = await (onSubmitVote
+        ? onSubmitVote(
+            selectedChoice.type === 'candidate'
+              ? { candidate_id: selectedChoice.id }
+              : { measure_option_id: selectedChoice.id },
+          )
+        : votingApi.postVote(
+            race.id,
+            selectedChoice.type === 'candidate'
+              ? { candidate_id: selectedChoice.id }
+              : { measure_option_id: selectedChoice.id },
+          ));
       onVoteSuccess(vote, selectedChoice);
       setDialogOpen(false);
     } catch (requestError) {
