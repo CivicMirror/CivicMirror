@@ -14,7 +14,6 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { getApiErrorMessage } from '../../api/client';
 import { civicElectionsApi } from '../../api/civicElections';
-import { getRaceOfficialResults } from '../../api/elections';
 import { votingApi } from '../../api/voting';
 import type { OfficialResultRow, OfficialResultsResponse, TallyResponse } from '../../types';
 import type { CivicRaceDetail } from '../../types/civicApi';
@@ -104,7 +103,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (certificationStatus === 'upcoming') {
+    if (certificationStatus === 'upcoming' || !civicRaceDetail) {
       setOfficialResults(null);
       setMockTally(null);
       setLoading(false);
@@ -118,18 +117,14 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
     setOfficialResults(null);
     setMockTally(null);
 
-    const officialResultsRequest = civicRaceDetail
-      ? civicElectionsApi
-          .getRaceResults(raceId)
-          .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail))
-      : getRaceOfficialResults(raceId);
+    const officialResultsRequest = civicElectionsApi
+      .getRaceResults(raceId)
+      .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail));
 
     const mockTallyRequest =
       certificationStatus === 'results_pending'
         ? Promise.resolve<TallyResponse | null>(null)
-        : civicRaceDetail
-          ? votingApi.getRaceTallyByExternalId(raceId)
-          : votingApi.getRaceTally(raceId);
+        : votingApi.getRaceTallyByExternalId(raceId);
 
     void Promise.allSettled([officialResultsRequest, mockTallyRequest])
       .then(([officialResponse, mockTallyResponse]) => {
