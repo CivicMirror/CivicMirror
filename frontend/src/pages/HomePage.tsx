@@ -7,6 +7,7 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
+  Paper,
   Select,
   Stack,
   Typography,
@@ -260,6 +261,28 @@ function HomePage() {
             setRequestKey((current) => current + 1);
           }}
         />
+      ) : resolvedScope === 'zip' && !loading && data !== null && data.count === 0 ? (
+        <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
+          <Stack alignItems="center" spacing={2}>
+            {lookupElections !== null && lookupElections.length > 0 ? (
+              <>
+                <Typography variant="h5">No race data available for this location.</Typography>
+                <Typography color="text.secondary" maxWidth={560}>
+                  An election was found for this area, but no contest information is available. This
+                  state may have only submitted polling location data to the data source.
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography variant="h5">No upcoming elections found for this location.</Typography>
+                <Typography color="text.secondary" maxWidth={560}>
+                  There are no active elections in our system for this area right now. Check back
+                  closer to an election date.
+                </Typography>
+              </>
+            )}
+          </Stack>
+        </Paper>
       ) : (
         <RaceList data={data} loading={loading} onPageChange={setPage} page={page} />
       )}

@@ -54,77 +54,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ── Backend ──────────────────────────────────────────────────────────────
-      - name: Build & push backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}
-            ${{ env.AR_BASE }}/backend:latest
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-
-      - name: Deploy backend to Cloud Run
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: civicmirror-backend
-          image: ${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}
-          region: ${{ env.GCP_REGION }}
-          flags: '--service-account=cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com'
-
-      - name: Run database migrations
-        run: |
-          gcloud run jobs create civicmirror-migrate \
-            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
-            --region "${{ env.GCP_REGION }}" \
-            --service-account "cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
-            --set-cloudsql-instances "civicmirror-2026:us-central1:civicmirror-db" \
-            --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.prod" \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest" \
-            --command "python" \
-            --args "manage.py,migrate,--noinput" \
-            --max-retries 0 \
-            --vpc-connector "projects/${{ env.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/civicmirror-connector" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --quiet || true
-          gcloud run jobs update civicmirror-migrate \
-            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
-            --region "${{ env.GCP_REGION }}" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --quiet || true
-          gcloud run jobs execute civicmirror-migrate \
-            --region "${{ env.GCP_REGION }}" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --wait
-
-      - name: Backfill ballot_type on existing civic_api races
-        run: |
-          gcloud run jobs create civicmirror-backfill-ballot-type \
-            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
-            --region "${{ env.GCP_REGION }}" \
-            --service-account "cloudrun-runtime@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
-            --set-cloudsql-instances "civicmirror-2026:us-central1:civicmirror-db" \
-            --set-env-vars "DJANGO_SETTINGS_MODULE=config.settings.prod" \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,DJANGO_SECRET_KEY=DJANGO_SECRET_KEY:latest,CIVIC_API_KEY=CIVIC_API_KEY:latest" \
-            --command "python" \
-            --args "manage.py,backfill_ballot_type,--trigger-sync" \
-            --max-retries 0 \
-            --vpc-connector "projects/${{ env.GCP_PROJECT_ID }}/locations/${{ env.GCP_REGION }}/connectors/civicmirror-connector" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --quiet || true
-          gcloud run jobs update civicmirror-backfill-ballot-type \
-            --image "${{ env.AR_BASE }}/backend:${{ steps.tag.outputs.tag }}" \
-            --region "${{ env.GCP_REGION }}" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --quiet || true
-          gcloud run jobs execute civicmirror-backfill-ballot-type \
-            --region "${{ env.GCP_REGION }}" \
-            --project "${{ env.GCP_PROJECT_ID }}" \
-            --wait || echo "Backfill job failed or no races needed backfill — continuing"
-
       # ── Frontend ─────────────────────────────────────────────────────────────
       - name: Build & push frontend image
         uses: docker/build-push-action@v6
@@ -137,7 +66,7 @@ jobs:
             ${{ env.AR_BASE }}/frontend:latest
           build-args: |
             VITE_API_URL=https://api.civicmirror.welshrd.com
-            VITE_CIVIC_API_URL=https://civicmirror-backend-866677508588.us-central1.run.app
+            VITE_CIVIC_API_URL=https://api.civicmirror.welshrd.com
             VITE_CIVIC_API_KEY=${{ secrets.VITE_CIVIC_API_KEY }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
