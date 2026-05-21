@@ -14,9 +14,7 @@ import {
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { raceApi } from '../api/elections';
 import { civicElectionsApi } from '../api/civicElections';
-import { getApiErrorMessage } from '../api/client';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LocationBar from '../components/races/LocationBar';
 import RaceList from '../components/races/RaceList';
@@ -25,7 +23,7 @@ import { useRaceFilters } from '../hooks/useRaceFilters';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import type { Election, PaginatedResponse, Race } from '../types';
 import { formatStateName } from '../utils/format';
-import { electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
+import { civicElectionToLegacy, civicRaceBaseToLegacy, electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
 
 function HomePage() {
   useIPGeolocation();
@@ -96,34 +94,66 @@ function HomePage() {
           if (isActive) setLoading(false);
         });
     } else {
-      // State / national / address scopes — continue using the embedded backend.
-      // These will be migrated to the new API in a subsequent phase.
+      // State / national / address scopes — CivicMirror-API
       setLookupElections(null);
-      void raceApi
-        .list({
-          scope: resolvedScope,
-          state: resolvedScope === 'state' ? effectiveState : null,
-          zip: null,
-          address: resolvedScope === 'address' ? address : null,
-          electionId,
-          contestType,
-          page,
-        })
-        .then((response) => {
-          if (isActive) {
-            setData(response);
-          }
-        })
-        .catch((requestError) => {
-          if (isActive) {
-            setError(getApiErrorMessage(requestError, 'We could not load races right now.'));
-          }
-        })
-        .finally(() => {
-          if (isActive) {
-            setLoading(false);
-          }
-        });
+
+      if (resolvedScope === 'address') {
+        // Address geocoding is not yet available in the new API.
+        setError('Address lookup is not yet available. Please enter a ZIP code to find your ballot.');
+        setLoading(false);
+      } else {
+        const stateFilter = resolvedScope === 'state' ? (effectiveState ?? undefined) : undefined;
+        const RACE_TYPE_VALUES = new Set(['candidate', 'measure']);
+        const raceTypeFilter =
+          contestType && RACE_TYPE_VALUES.has(contestType) ? contestType : undefined;
+
+        void Promise.all([
+          civicElectionsApi.listRaces({
+            state: stateFilter,
+            race_status: 'active',
+            election: electionId ?? undefined,
+            race_type: raceTypeFilter,
+            page,
+          }),
+          civicElectionsApi.listElections({ state: stateFilter }),
+        ])
+          .then(([racesResponse, electionsResponse]) => {
+            if (!isActive) return;
+            const electionMap = new Map<number, Election>(
+              electionsResponse.results.map((e) => [e.id, civicElectionToLegacy(e)]),
+            );
+            const legacyRaces: Race[] = racesResponse.results.map((r) =>
+              civicRaceBaseToLegacy(
+                r,
+                electionMap.get(r.election) ?? {
+                  id: r.election,
+                  name: '',
+                  election_date: '',
+                  jurisdiction_level: 'state',
+                  status: 'active',
+                },
+              ),
+            );
+            setData({
+              count: racesResponse.count,
+              next: racesResponse.next,
+              previous: racesResponse.previous,
+              results: legacyRaces,
+            });
+          })
+          .catch((requestError: unknown) => {
+            if (isActive) {
+              setError(
+                requestError instanceof Error
+                  ? requestError.message
+                  : 'We could not load races right now.',
+              );
+            }
+          })
+          .finally(() => {
+            if (isActive) setLoading(false);
+          });
+      }
     }
 
     return () => {

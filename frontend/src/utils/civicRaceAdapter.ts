@@ -1,9 +1,9 @@
 import type { Candidate, Election, MeasureOption, OfficialResultRow, OfficialResultsResponse, PaginatedResponse, Race } from '../types/api';
-import type { CivicElection, CivicLookupResult, CivicOfficialResult, CivicRaceDetail } from '../types/civicApi';
+import type { CivicElection, CivicLookupResult, CivicOfficialResult, CivicRaceBase, CivicRaceDetail } from '../types/civicApi';
 
 const PAGE_SIZE = 25;
 
-function civicElectionToLegacy(civicElection: CivicElection): Election {
+export function civicElectionToLegacy(civicElection: CivicElection): Election {
   return {
     id: civicElection.id,
     name: civicElection.name,
@@ -52,6 +52,30 @@ function civicRaceDetailToLegacy(race: CivicRaceDetail, election: CivicElection)
 }
 
 export { civicRaceDetailToLegacy };
+
+/**
+ * Converts a CivicRaceBase (list-view, no nested candidates) to the legacy Race shape.
+ * Used for state/national scope where the /api/v1/races/ list endpoint is used directly.
+ * Candidates and measure_options are empty — the detail page fetches them via getRaceDetail.
+ */
+export function civicRaceBaseToLegacy(race: CivicRaceBase, election: Election): Race {
+  return {
+    id: race.id,
+    election,
+    race_type: race.race_type,
+    ballot_type: '',
+    office_title: race.office_title,
+    jurisdiction: race.jurisdiction,
+    geography_scope: race.geography_scope,
+    certification_status: race.certification_status,
+    race_status: race.race_status,
+    source: 'civic_api',
+    vote_method: race.vote_method,
+    candidates: [],
+    measure_options: [],
+    mock_vote_count: 0,
+  };
+}
 
 function matchesContestType(race: Race, contestType: string | null | undefined): boolean {
   if (!contestType) return true;
