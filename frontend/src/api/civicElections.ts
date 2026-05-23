@@ -18,11 +18,13 @@ export const civicElectionsApi = {
   async listElections(params: {
     state?: string;
     status?: string;
+    jurisdiction_level?: 'national' | 'state' | 'local';
     page?: number;
   } = {}): Promise<CivicPaginatedResponse<CivicElection>> {
     const query: Record<string, string> = {};
     if (params.state) query.state = params.state;
     if (params.status) query.status = params.status;
+    if (params.jurisdiction_level) query.jurisdiction_level = params.jurisdiction_level;
     if (params.page) query.page = String(params.page);
     return civicApiClient.fetch<CivicPaginatedResponse<CivicElection>>('/api/v1/elections/', query);
   },

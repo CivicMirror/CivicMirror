@@ -103,6 +103,7 @@ function HomePage() {
         setLoading(false);
       } else {
         const stateFilter = resolvedScope === 'state' ? (effectiveState ?? undefined) : undefined;
+        const jurisdictionLevelFilter = resolvedScope === 'national' ? ('national' as const) : undefined;
         const RACE_TYPE_VALUES = new Set(['candidate', 'measure']);
         const raceTypeFilter =
           contestType && RACE_TYPE_VALUES.has(contestType) ? contestType : undefined;
@@ -115,14 +116,25 @@ function HomePage() {
             race_type: raceTypeFilter,
             page,
           }),
-          civicElectionsApi.listElections({ state: stateFilter }),
+          civicElectionsApi.listElections({
+            state: stateFilter,
+            jurisdiction_level: jurisdictionLevelFilter,
+          }),
         ])
           .then(([racesResponse, electionsResponse]) => {
             if (!isActive) return;
             const electionMap = new Map<number, Election>(
               electionsResponse.results.map((e) => [e.id, civicElectionToLegacy(e)]),
             );
-            const legacyRaces: Race[] = racesResponse.results.map((r) =>
+            // For national scope, cross-filter races to only those belonging to
+            // national-level elections. This is a client-side workaround until
+            // /api/v1/races/ supports a jurisdiction_level filter directly —
+            // see API-Reference.md for the pending backend change.
+            const filteredRaceResults =
+              resolvedScope === 'national'
+                ? racesResponse.results.filter((r) => electionMap.has(r.election))
+                : racesResponse.results;
+            const legacyRaces: Race[] = filteredRaceResults.map((r) =>
               civicRaceBaseToLegacy(
                 r,
                 electionMap.get(r.election) ?? {
@@ -135,9 +147,9 @@ function HomePage() {
               ),
             );
             setData({
-              count: racesResponse.count,
-              next: racesResponse.next,
-              previous: racesResponse.previous,
+              count: resolvedScope === 'national' ? filteredRaceResults.length : racesResponse.count,
+              next: resolvedScope === 'national' ? null : racesResponse.next,
+              previous: resolvedScope === 'national' ? null : racesResponse.previous,
               results: legacyRaces,
             });
           })
