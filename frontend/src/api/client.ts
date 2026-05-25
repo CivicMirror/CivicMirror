@@ -83,15 +83,23 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Something went wr
   const data = error.response?.data;
   if (typeof data === 'object' && data) {
     const detail = flattenErrorValue((data as Record<string, unknown>).detail);
-    if (detail) {
-      return detail;
-    }
+    if (detail) return detail;
 
     const nonFieldErrors = flattenErrorValue((data as Record<string, unknown>).non_field_errors);
-    if (nonFieldErrors) {
-      return nonFieldErrors;
-    }
+    if (nonFieldErrors) return nonFieldErrors;
+
+    // Flatten all field errors into a readable message
+    const fieldMessages = Object.entries(data as Record<string, unknown>)
+      .map(([field, value]) => {
+        const msg = flattenErrorValue(value);
+        return msg ? `${field}: ${msg}` : null;
+      })
+      .filter(Boolean)
+      .join(' | ');
+    if (fieldMessages) return fieldMessages;
   }
+
+  if (typeof data === 'string' && data) return data;
 
   return error.message || fallback;
 };

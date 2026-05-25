@@ -112,13 +112,21 @@ function RegisterPage() {
         terms_version: 'termsAccepted',
       };
 
+      let mappedFieldCount = 0;
       Object.entries(fieldMap).forEach(([apiField, formField]) => {
         if (fieldErrors[apiField]) {
           setError(formField, { message: fieldErrors[apiField], type: 'server' });
+          mappedFieldCount++;
         }
       });
 
-      setFormError(getApiErrorMessage(error, 'We could not complete registration right now.'));
+      // If errors are shown inline on fields, the banner just says where to look.
+      // If not, show the full API error so nothing is hidden.
+      if (mappedFieldCount > 0) {
+        setFormError('Please correct the errors highlighted below.');
+      } else {
+        setFormError(getApiErrorMessage(error, 'We could not complete registration right now.'));
+      }
     }
   });
 
