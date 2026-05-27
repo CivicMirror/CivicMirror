@@ -124,6 +124,8 @@ function HomePage() {
             election: electionId ?? undefined,
             race_type: raceTypeFilter,
             jurisdiction_level: jurisdictionLevelFilter,
+            election_date__gte: timeBounds.election_date__gte,
+            election_date__lte: timeBounds.election_date__lte,
             page,
           }),
           civicElectionsApi.listElections({
@@ -131,6 +133,7 @@ function HomePage() {
             jurisdiction_level: jurisdictionLevelFilter,
             election_date__gte: timeBounds.election_date__gte,
             election_date__lte: timeBounds.election_date__lte,
+            page_size: 200,
           }),
         ])
           .then(([racesResponse, electionsResponse]) => {

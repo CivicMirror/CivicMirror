@@ -22,6 +22,7 @@ export const civicElectionsApi = {
     election_date__gte?: string;
     election_date__lte?: string;
     page?: number;
+    page_size?: number;
   } = {}): Promise<CivicPaginatedResponse<CivicElection>> {
     const query: Record<string, string> = {};
     if (params.state) query.state = params.state;
@@ -30,6 +31,7 @@ export const civicElectionsApi = {
     if (params.election_date__gte) query.election_date__gte = params.election_date__gte;
     if (params.election_date__lte) query.election_date__lte = params.election_date__lte;
     if (params.page) query.page = String(params.page);
+    if (params.page_size) query.page_size = String(params.page_size);
     return civicApiClient.fetch<CivicPaginatedResponse<CivicElection>>('/api/v1/elections/', query);
   },
 
@@ -44,6 +46,8 @@ export const civicElectionsApi = {
     election?: number;
     geography_scope?: string;
     jurisdiction_level?: 'national' | 'state' | 'local';
+    election_date__gte?: string;
+    election_date__lte?: string;
     page?: number;
   } = {}): Promise<CivicPaginatedResponse<CivicRaceBase>> {
     const query: Record<string, string> = {};
@@ -53,6 +57,8 @@ export const civicElectionsApi = {
     if (params.election) query.election = String(params.election);
     if (params.geography_scope) query.geography_scope = params.geography_scope;
     if (params.jurisdiction_level) query.jurisdiction_level = params.jurisdiction_level;
+    if (params.election_date__gte) query.election_date__gte = params.election_date__gte;
+    if (params.election_date__lte) query.election_date__lte = params.election_date__lte;
     if (params.page) query.page = String(params.page);
     return civicApiClient.fetch<CivicPaginatedResponse<CivicRaceBase>>('/api/v1/races/', query);
   },
