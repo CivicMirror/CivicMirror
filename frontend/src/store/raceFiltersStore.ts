@@ -1,5 +1,7 @@
 import { create } from 'zustand';
+import type { TimeFilter } from '../utils/timeFilter';
 
+export type { TimeFilter };
 export type RaceFilterScope = 'national' | 'state' | 'zip' | 'address';
 
 export interface RaceFiltersState {
@@ -10,6 +12,7 @@ export interface RaceFiltersState {
   electionId: number | null;
   detectedState: string | null;
   contestType: string | null;
+  timeFilter: TimeFilter;
   setScope: (scope: RaceFilterScope) => void;
   setState: (state: string | null) => void;
   setZip: (zip: string | null) => void;
@@ -17,6 +20,7 @@ export interface RaceFiltersState {
   setElectionId: (id: number | null) => void;
   setDetectedState: (state: string | null) => void;
   setContestType: (type: string | null) => void;
+  setTimeFilter: (filter: TimeFilter) => void;
   clearLocationPreference: () => void;
 }
 
@@ -29,6 +33,7 @@ interface PersistedLocationPreference {
   address: string | null;
   electionId: number | null;
   contestType: string | null;
+  timeFilter: TimeFilter;
 }
 
 const defaultState: PersistedLocationPreference = {
@@ -38,6 +43,7 @@ const defaultState: PersistedLocationPreference = {
   address: null,
   electionId: null,
   contestType: null,
+  timeFilter: 'month',
 };
 
 const readPersistedLocation = (): PersistedLocationPreference => {
@@ -85,6 +91,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address: next.address,
         electionId: next.electionId,
         contestType: next.contestType,
+        timeFilter: next.timeFilter,
       });
       return { scope };
     });
@@ -98,6 +105,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address: null,
         electionId: current.electionId,
         contestType: current.contestType,
+        timeFilter: current.timeFilter,
       };
       persistLocation(next);
       return { ...next };
@@ -112,6 +120,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address: null,
         electionId: current.electionId,
         contestType: current.contestType,
+        timeFilter: current.timeFilter,
       };
       persistLocation(next);
       return { ...next };
@@ -126,6 +135,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address,
         electionId: current.electionId,
         contestType: current.contestType,
+        timeFilter: current.timeFilter,
       };
       persistLocation(next);
       return { ...next };
@@ -140,6 +150,7 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address: current.address,
         electionId: id,
         contestType: current.contestType,
+        timeFilter: current.timeFilter,
       };
       persistLocation(next);
       return { electionId: id };
@@ -154,9 +165,26 @@ export const useRaceFiltersStore = create<RaceFiltersState>((set) => ({
         address: current.address,
         electionId: current.electionId,
         contestType,
+        timeFilter: current.timeFilter,
       };
       persistLocation(next);
       return { contestType };
+    });
+  },
+  setTimeFilter(timeFilter) {
+    set((current) => {
+      const next: PersistedLocationPreference = {
+        scope: current.scope,
+        state: current.state,
+        zip: current.zip,
+        address: current.address,
+        // Clear any selected election — it may not belong to the new time window.
+        electionId: null,
+        contestType: current.contestType,
+        timeFilter,
+      };
+      persistLocation(next);
+      return { timeFilter, electionId: null };
     });
   },
   setDetectedState(state) {

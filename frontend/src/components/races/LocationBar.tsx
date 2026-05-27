@@ -22,6 +22,7 @@ import { useRaceFiltersStore, type RaceFilterScope } from '../../store/raceFilte
 import { formatStateName } from '../../utils/format';
 import { US_STATES } from '../../utils/usStates';
 import ContestTypeFilter from './ContestTypeFilter';
+import TimeFilterComponent from './TimeFilter';
 
 interface LocationBarProps {
   resolvedScope: RaceFilterScope;
@@ -245,6 +246,8 @@ function LocationBar({
           ) : null}
         </Stack>
       </Box>
+
+      <TimeFilterComponent />
 
       <ContestTypeFilter />
 

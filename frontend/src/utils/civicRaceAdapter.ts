@@ -88,17 +88,24 @@ function matchesContestType(race: Race, contestType: string | null | undefined):
  * Converts a `/api/v1/lookup/` response into the PaginatedResponse<Race> shape
  * that the existing RaceList/RaceCard components expect.
  *
- * Filtering by contestType and pagination are applied client-side because the
- * lookup endpoint returns all active races at once (no server-side filtering).
+ * Filtering by contestType and timeBounds (client-side date range) and
+ * pagination are applied here because the lookup endpoint returns all active
+ * races at once with no server-side filtering.
  */
 export function lookupResultsToLegacyPaged(
   results: CivicLookupResult[],
   page: number,
   contestType?: string | null,
+  timeBounds?: { election_date__gte?: string; election_date__lte?: string },
 ): PaginatedResponse<Race> {
-  const allRaces: Race[] = results.flatMap(({ election, races }) =>
-    races.map((race) => civicRaceDetailToLegacy(race, election)),
-  );
+  const allRaces: Race[] = results.flatMap(({ election, races }) => {
+    if (timeBounds) {
+      const d = election.election_date;
+      if (timeBounds.election_date__gte && d < timeBounds.election_date__gte) return [];
+      if (timeBounds.election_date__lte && d > timeBounds.election_date__lte) return [];
+    }
+    return races.map((race) => civicRaceDetailToLegacy(race, election));
+  });
 
   const filtered = allRaces.filter((race) => matchesContestType(race, contestType));
 

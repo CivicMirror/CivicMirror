@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import { formatStateName } from '../utils/format';
 import { isStateCode } from '../utils/usStates';
+import type { TimeFilter } from '../utils/timeFilter';
 
 const VALID_SCOPES = new Set(['national', 'state', 'zip', 'address']);
+const VALID_TIME_FILTERS = new Set<string>(['month', 'year', 'historical']);
 
 export const useRaceFilters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,6 +90,11 @@ export const useRaceFilters = () => {
     if (contestTypeParam !== f.contestType) {
       f.setContestType(contestTypeParam);
     }
+
+    const timeFilterParam = searchParams.get('timeFilter');
+    if (timeFilterParam && VALID_TIME_FILTERS.has(timeFilterParam) && timeFilterParam !== f.timeFilter) {
+      f.setTimeFilter(timeFilterParam as TimeFilter);
+    }
   }, [searchParams]); // only URL changes drive URL→Store sync
 
   // Store → URL: only re-runs when store fields change, reads URL via ref.
@@ -120,10 +127,15 @@ export const useRaceFilters = () => {
       next.set('contestType', filters.contestType);
     }
 
+    // Only put timeFilter in the URL when it's non-default to keep clean URLs.
+    if (filters.timeFilter !== 'month') {
+      next.set('timeFilter', filters.timeFilter);
+    }
+
     if (next.toString() !== searchParamsRef.current.toString()) {
       setSearchParamsRef.current(next, { replace: true });
     }
-  }, [filters.address, filters.contestType, filters.electionId, filters.scope, filters.state, filters.zip]); // only store changes drive Store→URL sync
+  }, [filters.address, filters.contestType, filters.electionId, filters.scope, filters.state, filters.timeFilter, filters.zip]); // only store changes drive Store→URL sync
 
   const activeLocationLabel = useMemo(() => {
     if (resolvedScope === 'state' && effectiveState) {

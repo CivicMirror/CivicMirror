@@ -23,6 +23,7 @@ import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import type { Election, PaginatedResponse, Race } from '../types';
 import { formatStateName } from '../utils/format';
 import { civicElectionToLegacy, civicRaceBaseToLegacy, electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
+import { getTimeBounds } from '../utils/timeFilter';
 
 function HomePage() {
   const {
@@ -32,11 +33,13 @@ function HomePage() {
     electionId,
     isAutoDetected,
     resolvedScope,
+    timeFilter,
     zip,
   } = useRaceFilters();
 
   const setElectionId = useRaceFiltersStore((state) => state.setElectionId);
   const contestType = useRaceFiltersStore((state) => state.contestType);
+  const timeBounds = getTimeBounds(timeFilter);
 
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
@@ -48,7 +51,7 @@ function HomePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [address, contestType, effectiveState, electionId, resolvedScope, zip]);
+  }, [address, contestType, effectiveState, electionId, resolvedScope, timeFilter, zip]);
 
   const hasIncompleteLocation =
     (resolvedScope === 'state' && !effectiveState) ||
@@ -68,15 +71,24 @@ function HomePage() {
     setError(null);
 
     if (resolvedScope === 'zip' && zip) {
+      // ZIP + Historical: the lookup endpoint only returns active elections, so
+      // historical data is not available via this path.
+      if (timeFilter === 'historical') {
+        setLoading(false);
+        setData(null);
+        setLookupElections(null);
+        return;
+      }
+
       // ZIP scope — use the CivicMirror-API lookup endpoint.
       // The lookup endpoint returns full race detail (candidates + measure_options) for all active
-      // elections in the state. We apply contestType filtering and pagination client-side.
+      // elections in the state. We apply contestType filtering, time bounds, and pagination client-side.
       void civicElectionsApi
         .lookup(zip, electionId ?? undefined)
         .then((results) => {
           if (!isActive) return;
           setLookupElections(electionsFromLookup(results));
-          setData(lookupResultsToLegacyPaged(results, page, contestType));
+          setData(lookupResultsToLegacyPaged(results, page, contestType, timeBounds));
         })
         .catch((requestError: unknown) => {
           if (isActive) {
@@ -108,14 +120,17 @@ function HomePage() {
         void Promise.all([
           civicElectionsApi.listRaces({
             state: stateFilter,
-            race_status: 'active',
+            race_status: timeBounds.race_status,
             election: electionId ?? undefined,
             race_type: raceTypeFilter,
+            jurisdiction_level: jurisdictionLevelFilter,
             page,
           }),
           civicElectionsApi.listElections({
             state: stateFilter,
             jurisdiction_level: jurisdictionLevelFilter,
+            election_date__gte: timeBounds.election_date__gte,
+            election_date__lte: timeBounds.election_date__lte,
           }),
         ])
           .then(([racesResponse, electionsResponse]) => {
@@ -123,14 +138,14 @@ function HomePage() {
             const electionMap = new Map<number, Election>(
               electionsResponse.results.map((e) => [e.id, civicElectionToLegacy(e)]),
             );
-            // For national scope, cross-filter races to only those belonging to
-            // national-level elections. This is a client-side workaround until
-            // /api/v1/races/ supports a jurisdiction_level filter directly —
-            // see API-Reference.md for the pending backend change.
-            const filteredRaceResults =
-              resolvedScope === 'national'
-                ? racesResponse.results.filter((r) => electionMap.has(r.election))
-                : racesResponse.results;
+            // Cross-filter races to only those belonging to elections in the
+            // current time window. This ensures date bounds are enforced even
+            // though /api/v1/races/ has no direct date filter.
+            // Note: this client-side filter means pagination counts may be
+            // slightly off when the server returns races outside the date range.
+            const filteredRaceResults = racesResponse.results.filter((r) =>
+              electionMap.has(r.election),
+            );
             const legacyRaces: Race[] = filteredRaceResults.map((r) =>
               civicRaceBaseToLegacy(
                 r,
@@ -144,9 +159,9 @@ function HomePage() {
               ),
             );
             setData({
-              count: resolvedScope === 'national' ? filteredRaceResults.length : racesResponse.count,
-              next: resolvedScope === 'national' ? null : racesResponse.next,
-              previous: resolvedScope === 'national' ? null : racesResponse.previous,
+              count: filteredRaceResults.length,
+              next: null,
+              previous: null,
               results: legacyRaces,
             });
           })
@@ -168,7 +183,7 @@ function HomePage() {
     return () => {
       isActive = false;
     };
-  }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, zip]);
+  }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, timeFilter, zip]);
 
   const elections = useMemo(() => {
     // For ZIP scope, elections come from the lookup response directly.
@@ -291,6 +306,17 @@ function HomePage() {
 
       {hasIncompleteLocation ? (
         <Alert severity="info">Choose a location above to load this feed.</Alert>
+      ) : resolvedScope === 'zip' && timeFilter === 'historical' ? (
+        <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
+          <Stack alignItems="center" spacing={2}>
+            <Typography variant="h5">Historical data not available for ZIP lookups.</Typography>
+            <Typography color="text.secondary" maxWidth={560}>
+              The ZIP lookup service only returns active, upcoming elections. To browse historical
+              races, switch to <strong>State</strong> or <strong>National</strong> view and select{' '}
+              <strong>Historical</strong>.
+            </Typography>
+          </Stack>
+        </Paper>
       ) : error ? (
         <ErrorMessage
           message={error}
