@@ -121,7 +121,7 @@ export const buildRaceTallyEntries = (race: Race, limit?: number): MockTallyEntr
       : race.race_type === 'candidate'
         ? (race.candidates ?? []).map((candidate) => ({
             id: candidate.id,
-            label: candidate.name,
+            label: candidate.incumbent ? `${candidate.name} ★` : candidate.name,
             party: candidate.party,
             votes: 0,
             percentage: 0,
