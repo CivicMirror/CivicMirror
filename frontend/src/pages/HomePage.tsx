@@ -18,7 +18,6 @@ import { civicElectionsApi } from '../api/civicElections';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LocationBar from '../components/races/LocationBar';
 import RaceList from '../components/races/RaceList';
-import { useIPGeolocation } from '../hooks/useIPGeolocation';
 import { useRaceFilters } from '../hooks/useRaceFilters';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import type { Election, PaginatedResponse, Race } from '../types';
@@ -26,8 +25,6 @@ import { formatStateName } from '../utils/format';
 import { civicElectionToLegacy, civicRaceBaseToLegacy, electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
 
 function HomePage() {
-  useIPGeolocation();
-
   const {
     activeLocationLabel,
     address,

@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
+import { useIPGeolocation } from '../../hooks/useIPGeolocation';
 import { useRaceFiltersStore, type RaceFilterScope } from '../../store/raceFiltersStore';
 import { formatStateName } from '../../utils/format';
 import { US_STATES } from '../../utils/usStates';
@@ -44,6 +45,7 @@ function LocationBar({
   const setZip = useRaceFiltersStore((state) => state.setZip);
   const setAddress = useRaceFiltersStore((state) => state.setAddress);
   const clearLocationPreference = useRaceFiltersStore((state) => state.clearLocationPreference);
+  const { detectState } = useIPGeolocation();
 
   const [zipInput, setZipInput] = useState(zip ?? '');
   const [addressInput, setAddressInput] = useState(address ?? '');
@@ -151,6 +153,22 @@ function LocationBar({
             <Tab label="Address" value="address" />
           </Tabs>
 
+          {resolvedScope === 'national' ? (
+            <Stack alignItems="flex-start" spacing={1}>
+              <Typography color="text.secondary" variant="body2">
+                Or let us detect your state automatically:
+              </Typography>
+              <Button
+                onClick={detectState}
+                size="small"
+                startIcon={<MyLocation />}
+                variant="outlined"
+              >
+                Auto-detect my state
+              </Button>
+            </Stack>
+          ) : null}
+
           {resolvedScope === 'state' ? (
             <FormControl fullWidth>
               <InputLabel id="state-select-label">State</InputLabel>
@@ -231,7 +249,10 @@ function LocationBar({
       <ContestTypeFilter />
 
       {isAutoDetected ? (
-        <Alert severity="info">We auto-detected your state from IP geolocation. Change it anytime.</Alert>
+        <Alert severity="info">
+          State detected from your IP address. Your IP was sent to ipapi.co for this lookup.
+          Change or clear it anytime.
+        </Alert>
       ) : null}
     </Stack>
   );

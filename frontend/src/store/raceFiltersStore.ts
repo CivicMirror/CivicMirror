@@ -51,7 +51,10 @@ const readPersistedLocation = (): PersistedLocationPreference => {
   }
 
   try {
-    return { ...defaultState, ...(JSON.parse(stored) as Partial<PersistedLocationPreference>) };
+    const parsed = JSON.parse(stored) as Partial<PersistedLocationPreference>;
+    // Always drop any previously-stored address — it is PII and we no longer
+    // write it, but old localStorage entries may still contain it.
+    return { ...defaultState, ...parsed, address: null };
   } catch {
     return defaultState;
   }
@@ -62,7 +65,9 @@ const persistLocation = (state: PersistedLocationPreference) => {
     return;
   }
 
-  window.localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(state));
+  // Never persist the street address — it is PII. Persist the scope so the
+  // Address tab remains selected on reload, but the user re-enters the value.
+  window.localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({ ...state, address: null }));
 };
 
 const persisted = readPersistedLocation();

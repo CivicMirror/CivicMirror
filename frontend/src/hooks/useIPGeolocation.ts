@@ -1,28 +1,21 @@
-import { useEffect } from 'react';
-import { LOCATION_STORAGE_KEY, useRaceFiltersStore } from '../store/raceFiltersStore';
+import { useCallback } from 'react';
+import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import { isStateCode } from '../utils/usStates';
 
 interface IpApiResponse {
   region_code?: string;
 }
 
+/**
+ * Returns a `detectState` callback that — only when explicitly invoked —
+ * calls ipapi.co to resolve the user's state from their IP address.
+ * This is intentionally not called automatically to avoid transmitting the
+ * user's IP to a third party without their consent.
+ */
 export const useIPGeolocation = () => {
-  const scope = useRaceFiltersStore((state) => state.scope);
-  const stateValue = useRaceFiltersStore((state) => state.state);
-  const zip = useRaceFiltersStore((state) => state.zip);
-  const address = useRaceFiltersStore((state) => state.address);
-  const detectedState = useRaceFiltersStore((state) => state.detectedState);
   const setDetectedState = useRaceFiltersStore((state) => state.setDetectedState);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    if (window.localStorage.getItem(LOCATION_STORAGE_KEY) || scope !== 'national' || stateValue || zip || address || detectedState) {
-      return undefined;
-    }
-
+  const detectState = useCallback(() => {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 3000);
 
@@ -43,10 +36,7 @@ export const useIPGeolocation = () => {
       .finally(() => {
         window.clearTimeout(timeoutId);
       });
+  }, [setDetectedState]);
 
-    return () => {
-      window.clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [address, detectedState, scope, setDetectedState, stateValue, zip]);
+  return { detectState };
 };

@@ -16,3 +16,6 @@ terraform/terraform.tfvars
 terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.backup
+
+# Phase Build Files
+docs/Phase Build Files/
