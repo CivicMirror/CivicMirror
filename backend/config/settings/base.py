@@ -23,7 +23,7 @@ def _csv_env(name: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in str(value).split(',') if item.strip()]
 
 
-SECRET_KEY = env('DJANGO_SECRET_KEY', default='django-insecure-change-me')
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 DEBUG = env.bool('DJANGO_DEBUG', default=False)
 ALLOWED_HOSTS = _csv_env('DJANGO_ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:5173')
