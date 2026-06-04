@@ -39,6 +39,7 @@ export const COVERAGE: Partial<Record<string, CoverageTier>> = {
   MA: 'full',
   VA: 'full',
   AZ: 'full',
+  NC: 'full',
 
   // Results adapter (election-night results when results_url is configured)
   AR: 'results',
