@@ -1,5 +1,5 @@
 import ArrowForward from '@mui/icons-material/ArrowForward';
-import { Box, Button, Pagination, Paper, Stack, Typography } from '@mui/material';
+import { Button, Pagination, Paper, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { PaginatedResponse, Race } from '../../types';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -38,20 +38,11 @@ function RaceList({ data, loading, page, onPageChange, pageSize = 25 }: RaceList
 
   return (
     <Stack spacing={3}>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(2, minmax(0, 1fr))',
-          },
-          gap: 3,
-        }}
-      >
+      <Stack spacing={0.75}>
         {data.results.map((race) => (
           <RaceCard key={race.id} race={race} />
         ))}
-      </Box>
+      </Stack>
 
       {pageCount > 1 ? (
         <Stack alignItems="center">

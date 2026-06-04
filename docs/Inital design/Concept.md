@@ -237,3 +237,54 @@ A persistent footer is displayed across all views and all authentication states:
 
 *Document version: 0.1 — initial concept*
 *Last updated: May 2026*
+
+
+## Design Update: 06/04/2026*
+### Goal
+
+Replace the current large vertical election cards with a compact horizontal summary card that displays election information in a two-line layout.
+
+*Design Objectives:*
+Reduce vertical screen usage.
+Allow more elections to be visible without scrolling.
+Preserve important election metadata.
+Remain responsive on desktop and mobile.
+ Card layout to minimise scrolling
+
+┌───────────────────────────────────────────────────────────────┐
+│ City Council At Large, Florence                  [ ACTIVE ]   │
+│ Florence, SC • Nov 3, 2026 • Special Election                 │
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│ City Council District 02                         [ PENDING ]  │
+│ Florence, SC • Nov 3, 2026 • Race                             │
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│ School Board Referendum                           [ CLOSED ]  │
+│ Columbia, SC • Nov 3, 2026 • Measure                          │
+└───────────────────────────────────────────────────────────────┘
+  *Required Fields*
+  
+| Field         | Example                   |
+| ------------- | ------------------------- |
+| Election Name | City Council District 02  |
+| City          | Florence                  |
+| State         | SC                        |
+| Election Date | Nov 3, 2026               |
+| Election Type | Race / Measure / Other    |
+| Status        | Active / Pending / Closed |
+
+*UX Behavior*
+Entire card is clickable.
+Status badge aligned right.
+Fixed card height (~60-80px).
+Hover state highlights card.
+Mobile view stacks naturally while preserving two-line format.
+Status colors:
+Active = Green
+Pending = Orange
+Closed = Gray
+
+

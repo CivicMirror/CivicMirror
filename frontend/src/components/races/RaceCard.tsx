@@ -1,88 +1,56 @@
-import ArrowForward from '@mui/icons-material/ArrowForward';
-import HowToVote from '@mui/icons-material/HowToVote';
 import {
-  Box,
   Card,
   CardActionArea,
   CardContent,
   Chip,
-  Divider,
   Stack,
   Typography,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import type { Race } from '../../types';
-import { buildRaceTallyEntries, buildTallyOptions, formatCompactNumber, formatRaceSource } from '../../utils/format';
-import CertificationBadge from './CertificationBadge';
-import ContestTypePill from './ContestTypePill';
-import StatusChip from './StatusChip';
-import TallyBars from './TallyBars';
+import { formatDate } from '../../utils/format';
 
 interface RaceCardProps {
   race: Race;
 }
 
+// Maps the five internal race_status values to the three concept-level buckets.
+const STATUS_BUCKET: Record<Race['race_status'], { label: string; color: 'success' | 'warning' | 'default' }> = {
+  active:         { label: 'Active',   color: 'success' },
+  draft:          { label: 'Pending',  color: 'warning' },
+  pending_review: { label: 'Pending',  color: 'warning' },
+  cancelled:      { label: 'Closed',   color: 'default' },
+  archived:       { label: 'Closed',   color: 'default' },
+};
+
+const RACE_TYPE_LABEL: Record<Race['race_type'], string> = {
+  candidate: 'Race',
+  measure:   'Measure',
+};
+
 function RaceCard({ race }: RaceCardProps) {
-  const tallyEntries = buildRaceTallyEntries(race);
-  const previewEntries = tallyEntries.slice(0, 3);
-  const previewOptions = buildTallyOptions(
-    previewEntries,
-    race.race_type === 'candidate' ? 'candidate' : 'measure_option',
-  );
-  const hiddenCount = Math.max(0, tallyEntries.length - previewEntries.length);
+  const status = STATUS_BUCKET[race.race_status];
+  const typeLabel = RACE_TYPE_LABEL[race.race_type] ?? 'Other';
+  const dateLabel = formatDate(race.election.election_date);
 
   return (
-    <Card sx={{ height: '100%' }}>
-      <CardActionArea component={RouterLink} sx={{ height: '100%' }} to={`/races/${race.id}`}>
-        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.25, height: '100%' }}>
-          <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="space-between">
-            <Stack alignItems="center" direction="row" flexWrap="wrap" gap={1}>
-              <Chip label={formatRaceSource(race.source)} size="small" variant="filled" />
-              <ContestTypePill ballot_type={race.ballot_type} />
-            </Stack>
-            <Stack alignItems="flex-end" gap={1}>
-              <StatusChip race_status={race.race_status} />
-              {race.certification_status !== 'upcoming' ? (
-                <CertificationBadge status={race.certification_status} />
-              ) : null}
-            </Stack>
-          </Stack>
-
-          <Box>
-            <Typography gutterBottom variant="h6">
+    <Card sx={{ borderRadius: 1 }}>
+      <CardActionArea component={RouterLink} to={`/races/${race.id}`}>
+        <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ mb: 0.25 }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={600}
+              noWrap
+              sx={{ flex: 1, minWidth: 0 }}
+            >
               {race.office_title}
             </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {race.jurisdiction}
-            </Typography>
-          </Box>
-
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {previewEntries.map((entry) => (
-              <Chip
-                key={entry.id}
-                icon={<HowToVote fontSize="small" />}
-                label={entry.party ? `${entry.label} · ${entry.party}` : entry.label}
-              />
-            ))}
-            {hiddenCount > 0 ? <Chip label={`+${hiddenCount} more`} /> : null}
+            <Chip color={status.color} label={status.label} size="small" />
           </Stack>
-
-          <TallyBars compact options={previewOptions} showTotal={false} totalVotes={race.mock_vote_count} />
-
-          <Divider />
-
-          <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={2}>
-            <Typography color="text.secondary" variant="body2">
-              {formatCompactNumber(race.mock_vote_count)} mock votes cast
-            </Typography>
-            <Stack alignItems="center" color="primary.main" direction="row" spacing={0.5}>
-              <Typography color="primary.main" fontWeight={700} variant="body2">
-                See details
-              </Typography>
-              <ArrowForward fontSize="small" />
-            </Stack>
-          </Stack>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {race.jurisdiction} &bull; {dateLabel} &bull; {typeLabel}
+          </Typography>
         </CardContent>
       </CardActionArea>
     </Card>
