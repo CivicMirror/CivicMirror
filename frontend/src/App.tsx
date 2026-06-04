@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import CoveragePage from './pages/CoveragePage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -27,6 +28,7 @@ function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/coverage" element={<CoveragePage />} />
         <Route
           path="/races/submit"
           element={

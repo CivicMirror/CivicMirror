@@ -45,6 +45,9 @@ function Header() {
           <Button component={RouterLink} to="/">
             Browse races
           </Button>
+          <Button component={RouterLink} to="/coverage">
+            Coverage
+          </Button>
 
           {isAuthenticated ? (
             <>
