@@ -1,0 +1,27 @@
+# CivicMirror
+
+CivicMirror is an open civic engagement platform that imports real U.S. election data and allows anyone to cast a mock vote, regardless of age, citizenship, or country of residence. After official results are certified, the platform compares mock vote outcomes against real-world results.
+
+## What CivicMirror Is
+
+- Public mock voting platform for real U.S. elections
+- No eligibility restrictions — anyone worldwide can participate
+- Data sourced from Google Civic API, OpenFEC, Open States, OpenElections, and state SOS offices
+- Covers all 50 states; 7 states with full SOS integration, 23 with results adapters
+
+## Key Pages
+
+- Homepage / Race Browser: https://civicmirror.app/
+- State Coverage: https://civicmirror.app/coverage
+- Pricing (free): https://civicmirror.app/pricing.md
+- Registration (free): https://civicmirror.app/register
+
+## What CivicMirror Is Not
+
+- Not an official election authority
+- Not affiliated with any government agency or political organization
+- Mock votes have no legal effect
+
+## Contact
+
+For researcher or institutional access inquiries: welefort@gmail.com

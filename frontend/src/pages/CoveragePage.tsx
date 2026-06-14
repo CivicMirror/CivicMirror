@@ -36,6 +36,37 @@ function groupByTier(states: typeof US_STATES) {
   return result;
 }
 
+const COVERAGE_FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Which states does CivicMirror have full coverage for?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'CivicMirror has full SOS integration for West Virginia, Colorado, South Carolina, Massachusetts, Virginia, Arizona, and North Carolina. Full coverage means elections, races, candidates, and live results are ingested directly from the state source.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: "What does 'Results Adapter' mean on CivicMirror?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A Results Adapter means CivicMirror can display live election-night results for that state when configured per election. Elections and races for these states come from the national Civic data feed.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Does CivicMirror cover all 50 states?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. All 50 states have elections and races available via the national Civic data feed. 7 states have full SOS integration with live results, 23 have a results adapter, and the remaining states have elections and candidate data only.',
+      },
+    },
+  ],
+};
+
 function CoveragePage() {
   const byTier = groupByTier(US_STATES);
   const syncStatus = useCoverageSyncStatus();
@@ -48,6 +79,10 @@ function CoveragePage() {
 
   return (
     <Stack spacing={4}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(COVERAGE_FAQ_SCHEMA) }}
+      />
       {/* Hero */}
       <Card>
         <CardContent sx={{ p: { xs: 3, md: 5 } }}>
