@@ -1,7 +1,11 @@
+import logging
+import traceback
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
+logger = logging.getLogger(__name__)
 
 GENERIC_SERVER_ERROR = 'An unexpected error occurred.'
 
@@ -18,6 +22,7 @@ def _coerce_to_list(value):
 def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     if response is None:
+        logger.error('Unhandled exception in %s:\n%s', context.get('view'), traceback.format_exc())
         return Response(
             {
                 'detail': GENERIC_SERVER_ERROR,
