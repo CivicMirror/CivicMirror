@@ -30,6 +30,9 @@ FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:5173')
 CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS', default=[FRONTEND_BASE_URL])
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
+from corsheaders.defaults import default_headers  # noqa: E402
+CORS_ALLOW_HEADERS = list(default_headers) + ['x-api-key']
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
