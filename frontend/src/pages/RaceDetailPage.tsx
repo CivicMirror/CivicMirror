@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useParams } from 'react-router-dom';
 import { getApiErrorMessage } from '../api/client';
 import { civicElectionsApi } from '../api/civicElections';
 import { votingApi } from '../api/voting';
@@ -37,6 +37,7 @@ import { civicRaceDetailToLegacy } from '../utils/civicRaceAdapter';
 
 function RaceDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [civicDetail, setCivicDetail] = useState<CivicRaceDetail | null>(null);
   const [race, setRace] = useState<Race | null>(null);
@@ -203,10 +204,10 @@ function RaceDetailPage() {
               <Typography variant="h5">Cast a mock vote</Typography>
               <Alert severity="info">Register or log in to cast a mock vote.</Alert>
               <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
-                <Button component={RouterLink} to="/register" variant="contained">
+                <Button component={RouterLink} to="/register" state={{ returnTo: location.pathname }} variant="contained">
                   Register
                 </Button>
-                <Button component={RouterLink} to="/login" variant="outlined">
+                <Button component={RouterLink} to="/login" state={{ returnTo: location.pathname }} variant="outlined">
                   Log in
                 </Button>
               </Stack>

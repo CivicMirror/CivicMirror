@@ -54,6 +54,12 @@ function CoveragePage() {
               <strong>{fullCount + resultsCount} states</strong> with dedicated data integrations.
               All 50 states have elections and races available via the national Civic data feed.
             </Typography>
+            <Typography color="text.secondary" maxWidth={720} variant="body1">
+              Seven states — West Virginia, Colorado, South Carolina, Massachusetts, Virginia,
+              Arizona, and North Carolina — have full SOS integration with direct ingestion of
+              elections, races, candidates, and live results. All remaining states have race and
+              candidate data available via the national Civic Information feed.
+            </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1.5} pt={1}>
               <Chip
                 color="success"

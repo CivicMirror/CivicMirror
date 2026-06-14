@@ -4,8 +4,10 @@ import {
   Button,
   Card,
   CardContent,
+  Divider,
   FormControl,
   InputLabel,
+  Link,
   MenuItem,
   Paper,
   Select,
@@ -24,6 +26,7 @@ import type { Election, PaginatedResponse, Race } from '../types';
 import { formatStateName } from '../utils/format';
 import { civicElectionToLegacy, civicRaceBaseToLegacy, electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
 import { getTimeBounds } from '../utils/timeFilter';
+import { COVERAGE } from '../utils/coverage';
 
 function HomePage() {
   const {
@@ -48,6 +51,13 @@ function HomePage() {
   const [lookupElections, setLookupElections] = useState<Election[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeRaceCount, setActiveRaceCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    void civicElectionsApi.listRaces({ race_status: 'active' })
+      .then((res) => setActiveRaceCount(res.count))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -248,13 +258,37 @@ function HomePage() {
                 progressively narrow the feed from national races down to the ballot near them.
               </Typography>
             </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} gap={1.5} flexWrap="wrap">
               <Button component="a" href="#civicmirror-location-bar" variant="contained">
                 Enter ZIP or address
               </Button>
               <Button color="primary" component={RouterLink} to="/register" variant="outlined">
                 Register to save your profile
               </Button>
+              <Link component={RouterLink} to="/coverage" variant="body2" sx={{ ml: { sm: 0.5 } }}>
+                See which states have full data →
+              </Link>
+            </Stack>
+            <Divider />
+            <Stack direction="row" gap={4} flexWrap="wrap">
+              <Box>
+                <Typography fontWeight={700} variant="subtitle1">50</Typography>
+                <Typography color="text.secondary" display="block" variant="caption">states covered</Typography>
+              </Box>
+              <Box>
+                <Typography fontWeight={700} variant="subtitle1">{Object.values(COVERAGE).length}</Typography>
+                <Typography color="text.secondary" display="block" variant="caption">live data adapters</Typography>
+              </Box>
+              {activeRaceCount !== null && (
+                <Box>
+                  <Typography fontWeight={700} variant="subtitle1">{activeRaceCount.toLocaleString()}</Typography>
+                  <Typography color="text.secondary" display="block" variant="caption">active races</Typography>
+                </Box>
+              )}
+              <Box>
+                <Typography fontWeight={700} variant="subtitle1">Open</Typography>
+                <Typography color="text.secondary" display="block" variant="caption">no eligibility required</Typography>
+              </Box>
             </Stack>
           </Stack>
         </CardContent>
