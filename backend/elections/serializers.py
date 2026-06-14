@@ -51,7 +51,6 @@ class RaceSerializer(serializers.ModelSerializer):
     election_name = serializers.CharField(source='election.name', read_only=True)
     election_date = serializers.DateField(source='election.election_date', read_only=True)
     state = serializers.CharField(source='election.state', read_only=True)
-    submitter_username = serializers.CharField(source='submitter.username', read_only=True)
     candidates = CandidateSerializer(many=True, read_only=True)
     measure_options = MeasureOptionSerializer(many=True, read_only=True)
 
@@ -71,10 +70,6 @@ class RaceSerializer(serializers.ModelSerializer):
             'voting_closes',
             'certification_status',
             'source',
-            'community_status',
-            'submitter',
-            'submitter_username',
-            'submitted_at',
             'source_links',
             'location_name',
             'race_status',

@@ -45,8 +45,21 @@ class RaceViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['office_title', 'last_synced_at']
     ordering = ['office_title']
 
+    # Columns dropped from the production DB in later migrations but still defined in
+    # the model (code diverged from production schema). Defer them to avoid SELECT errors.
+    _DEFERRED_RACE_COLS = (
+        'community_status', 'submitter_id', 'submitted_at',
+        'moderator_notes', 'reviewed_at', 'reviewed_by_id', 'rejection_reason',
+        'external_race_id',
+    )
+
     def get_queryset(self):
-        queryset = Race.public_objects.select_related('election', 'submitter').prefetch_related('candidates', 'measure_options')
+        queryset = (
+            Race.public_objects
+            .defer(*self._DEFERRED_RACE_COLS)
+            .select_related('election')
+            .prefetch_related('candidates', 'measure_options')
+        )
 
         scope = self.request.query_params.get('scope')
         state = self.request.query_params.get('state')
