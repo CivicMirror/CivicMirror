@@ -1,6 +1,7 @@
 import CheckCircleOutline from '@mui/icons-material/CheckCircleOutline';
 import OpenInNew from '@mui/icons-material/OpenInNew';
 import RadioButtonUnchecked from '@mui/icons-material/RadioButtonUnchecked';
+import Sync from '@mui/icons-material/Sync';
 import WarningAmber from '@mui/icons-material/WarningAmber';
 import {
   Box,
@@ -13,7 +14,9 @@ import {
   Typography,
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import { latestStateSync, useCoverageSyncStatus } from '../hooks/useCoverageSyncStatus';
 import { COVERAGE_TIER_META, getTier, type CoverageTier } from '../utils/coverage';
+import { timeAgo } from '../utils/timeAgo';
 import { US_STATES } from '../utils/usStates';
 
 const TIER_ICON: Record<CoverageTier, React.ReactNode> = {
@@ -35,10 +38,13 @@ function groupByTier(states: typeof US_STATES) {
 
 function CoveragePage() {
   const byTier = groupByTier(US_STATES);
+  const syncStatus = useCoverageSyncStatus();
 
   const fullCount = (byTier['full'] ?? []).length;
   const resultsCount = (byTier['results'] ?? []).length;
   const electionsCount = (byTier['elections'] ?? []).length;
+
+  const civicApiSync = syncStatus?.global.civic_api ?? null;
 
   return (
     <Stack spacing={4}>
@@ -79,6 +85,14 @@ function CoveragePage() {
                 label={`${electionsCount} Elections Only`}
                 variant="outlined"
               />
+              {civicApiSync && (
+                <Chip
+                  icon={<Sync />}
+                  label={`National feed synced ${timeAgo(civicApiSync.last_completed_at)}`}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
             </Stack>
           </Stack>
         </CardContent>
@@ -118,9 +132,20 @@ function CoveragePage() {
                 lg: 'repeat(5, 1fr)',
               }}
             >
-              {states.map((state) => (
-                <StateCard key={state.code} code={state.code} name={state.name} tier={tier} />
-              ))}
+              {states.map((state) => {
+                const stateSync = syncStatus
+                  ? latestStateSync(syncStatus.by_state, state.code)
+                  : null;
+                return (
+                  <StateCard
+                    key={state.code}
+                    code={state.code}
+                    name={state.name}
+                    tier={tier}
+                    lastSyncedAt={stateSync?.last_completed_at ?? null}
+                  />
+                );
+              })}
             </Box>
           </Stack>
         );
@@ -133,9 +158,10 @@ interface StateCardProps {
   code: string;
   name: string;
   tier: CoverageTier;
+  lastSyncedAt: string | null;
 }
 
-function StateCard({ code, name, tier }: StateCardProps) {
+function StateCard({ code, name, tier, lastSyncedAt }: StateCardProps) {
   const meta = COVERAGE_TIER_META[tier];
   const canBrowse = tier === 'full' || tier === 'results';
 
@@ -173,6 +199,11 @@ function StateCard({ code, name, tier }: StateCardProps) {
             ) : null}
           </Stack>
           <Chip color={meta.color} label={meta.label} size="small" sx={{ alignSelf: 'flex-start' }} />
+          {lastSyncedAt && (
+            <Typography variant="caption" color="text.disabled" lineHeight={1.3}>
+              Synced {timeAgo(lastSyncedAt)}
+            </Typography>
+          )}
         </Stack>
       </CardContent>
     </Card>

@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from elections.urls import router as elections_router, urlpatterns as elections_urlpatterns
+from ops.views import CoverageSyncStatusView
 from results.urls import router as results_router, urlpatterns as results_urlpatterns
 from voting.urls import router as voting_router, urlpatterns as voting_urlpatterns
 
@@ -16,4 +17,5 @@ urlpatterns = [
     path('', include((voting_urlpatterns, 'voting'))),
     path('', include('accounts.urls')),
     path('', include(router.urls)),
+    path('coverage/sync-status/', CoverageSyncStatusView.as_view(), name='coverage-sync-status'),
 ]
