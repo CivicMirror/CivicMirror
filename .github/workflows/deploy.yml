@@ -65,8 +65,8 @@ jobs:
             ${{ env.AR_BASE }}/frontend:${{ steps.tag.outputs.tag }}
             ${{ env.AR_BASE }}/frontend:latest
           build-args: |
-            VITE_API_URL=https://api.civicmirror.welshrd.com
-            VITE_CIVIC_API_URL=https://api.civicmirror.welshrd.com
+            VITE_API_URL=https://api.civicmirror.app
+            VITE_CIVIC_API_URL=https://api.civicmirror.app
             VITE_CIVIC_API_KEY=${{ secrets.VITE_CIVIC_API_KEY }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
@@ -86,5 +86,5 @@ jobs:
           echo "| | |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Tag** | \`${{ steps.tag.outputs.tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **App** | https://civicmirror.welshrd.com |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **API** | https://api.civicmirror.welshrd.com |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **App** | https://civicmirror.app |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **API** | https://api.civicmirror.app |" >> "$GITHUB_STEP_SUMMARY"
