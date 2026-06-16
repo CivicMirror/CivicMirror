@@ -13,6 +13,7 @@ export interface SyncStatusResponse {
   as_of: string;
   global: Record<string, SourceStatus>;
   by_state: Record<string, Record<string, SourceStatus>>;
+  adapter_states: string[];
 }
 
 export function useCoverageSyncStatus(): SyncStatusResponse | null {

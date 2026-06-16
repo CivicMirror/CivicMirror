@@ -27,10 +27,10 @@ const TIER_ICON: Record<CoverageTier, React.ReactNode> = {
 
 const TIER_ORDER: CoverageTier[] = ['full', 'results', 'elections'];
 
-function groupByTier(states: typeof US_STATES) {
+function groupByTier(states: typeof US_STATES, adapterStates?: string[]) {
   const result: Partial<Record<CoverageTier, typeof US_STATES>> = {};
   for (const s of states) {
-    const tier = getTier(s.code);
+    const tier = getTier(s.code, adapterStates);
     (result[tier] ??= []).push(s);
   }
   return result;
@@ -68,8 +68,8 @@ const COVERAGE_FAQ_SCHEMA = {
 };
 
 function CoveragePage() {
-  const byTier = groupByTier(US_STATES);
   const syncStatus = useCoverageSyncStatus();
+  const byTier = groupByTier(US_STATES, syncStatus?.adapter_states);
 
   const fullCount = (byTier['full'] ?? []).length;
   const resultsCount = (byTier['results'] ?? []).length;

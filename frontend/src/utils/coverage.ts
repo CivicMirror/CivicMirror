@@ -67,6 +67,15 @@ export const COVERAGE: Partial<Record<string, CoverageTier>> = {
   WY: 'results',
 };
 
-export function getTier(stateCode: string): CoverageTier {
-  return COVERAGE[stateCode.toUpperCase()] ?? 'elections';
+/**
+ * Returns the coverage tier for a state.
+ * adapterStates (from /api/coverage/sync-status/) promotes unlisted states to
+ * 'results' automatically when a new results adapter is registered on the backend.
+ */
+export function getTier(stateCode: string, adapterStates?: string[]): CoverageTier {
+  const code = stateCode.toUpperCase();
+  const hardcoded = COVERAGE[code];
+  if (hardcoded) return hardcoded;
+  if (adapterStates?.includes(code)) return 'results';
+  return 'elections';
 }

@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from results.adapters import list_supported_states
+
 from .models import SyncLog
 
 
@@ -76,4 +78,5 @@ class CoverageSyncStatusView(APIView):
             'as_of': timezone.now(),
             'global': global_sources,
             'by_state': by_state,
+            'adapter_states': list_supported_states(),
         })
