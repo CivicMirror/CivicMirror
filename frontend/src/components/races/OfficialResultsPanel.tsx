@@ -20,6 +20,7 @@ import type { OfficialResultRow, OfficialResultsResponse, TallyResponse } from '
 import type { CivicRaceDetail } from '../../types/civicApi';
 import { formatDateTime, formatPercent } from '../../utils/format';
 import { civicResultsToLegacyResponse } from '../../utils/civicRaceAdapter';
+import { RESULT_STATUS_MAP, resolveResultStatusKey } from '../../utils/resultStatus';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 interface OfficialResultsPanelProps {
@@ -153,50 +154,30 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
 
   const effectiveCertificationStatus = officialResults?.certification_status ?? certificationStatus;
   const rows = officialResults?.results ?? [];
-  const hasUnofficialRows = rows.some((row) => row.result_type === 'unofficial');
-  const hasOfficialRows = rows.some((row) => row.result_type === 'official');
   const sourceUrl = officialResults?.source_url || rows[0]?.source_url || '';
-  const certifiedAt = rows.find((row) => row.certified_at)?.certified_at;
 
-  const resultStatus = (() => {
-    if (hasUnofficialRows) {
-      return {
-        title: 'Unofficial Results',
-        chipLabel: 'Unofficial — Subject to Change',
-        chipColor: 'warning',
-        voteColumnPrefix: 'Unofficial',
-        description: 'Reported election results are available, but they have not been certified and may change.',
-      } as const;
+  const { hasUnofficialRows, hasOfficialRows, certifiedAt } = useMemo(() => {
+    let unofficial = false;
+    let official = false;
+    let latestCertifiedAt: string | null = null;
+
+    for (const row of rows) {
+      if (row.result_type === 'unofficial') {
+        unofficial = true;
+      } else if (row.result_type === 'official') {
+        official = true;
+      }
+
+      if (row.certified_at && (!latestCertifiedAt || row.certified_at > latestCertifiedAt)) {
+        latestCertifiedAt = row.certified_at;
+      }
     }
 
-    if (effectiveCertificationStatus === 'partial_results') {
-      return {
-        title: 'Partial Results',
-        chipLabel: 'Partial',
-        chipColor: 'warning',
-        voteColumnPrefix: 'Result',
-        description: 'Some election results are available, but the comparison may be incomplete.',
-      } as const;
-    }
+    return { hasUnofficialRows: unofficial, hasOfficialRows: official, certifiedAt: latestCertifiedAt };
+  }, [rows]);
 
-    if (hasOfficialRows || effectiveCertificationStatus === 'results_certified') {
-      return {
-        title: 'Certified Results',
-        chipLabel: 'Certified Final',
-        chipColor: 'success',
-        voteColumnPrefix: 'Certified',
-        description: 'Final certified election results are available for this race.',
-      } as const;
-    }
-
-    return {
-      title: 'Results Pending',
-      chipLabel: 'Pending',
-      chipColor: 'info',
-      voteColumnPrefix: 'Result',
-      description: 'Election results are not available yet.',
-    } as const;
-  })();
+  const resultStatusKey = resolveResultStatusKey(effectiveCertificationStatus, hasUnofficialRows, hasOfficialRows);
+  const resultStatus = RESULT_STATUS_MAP[resultStatusKey];
 
   const comparisonRows = useMemo<ComparisonRow[]>(() => {
     const mockOptions = new Map((mockTally?.options ?? []).map((option) => [normalizeLabel(option.label), option]));
@@ -230,7 +211,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   }
 
   if (comparisonRows.length === 0) {
-    return <Alert severity="info">Election results are not available yet.</Alert>;
+    return <Alert severity="info">{RESULT_STATUS_MAP.results_pending.description}</Alert>;
   }
 
   return (
@@ -242,7 +223,13 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
             {resultStatus.description}
           </Typography>
         </Box>
-        <Chip color={resultStatus.chipColor} label={resultStatus.chipLabel} size="small" sx={{ alignSelf: 'flex-start' }} />
+        <Chip
+          color={resultStatus.color}
+          label={resultStatus.label}
+          size="small"
+          sx={{ alignSelf: 'flex-start' }}
+          variant={resultStatus.variant}
+        />
       </Stack>
 
       {effectiveCertificationStatus === 'partial_results' ? (
