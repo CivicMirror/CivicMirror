@@ -2,6 +2,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import {
   Alert,
   Box,
+  Chip,
   Link,
   Stack,
   Table,
@@ -17,7 +18,7 @@ import { civicElectionsApi } from '../../api/civicElections';
 import { votingApi } from '../../api/voting';
 import type { OfficialResultRow, OfficialResultsResponse, TallyResponse } from '../../types';
 import type { CivicRaceDetail } from '../../types/civicApi';
-import { formatPercent } from '../../utils/format';
+import { formatDateTime, formatPercent } from '../../utils/format';
 import { civicResultsToLegacyResponse } from '../../utils/civicRaceAdapter';
 import LoadingSpinner from '../common/LoadingSpinner';
 
@@ -25,7 +26,7 @@ interface OfficialResultsPanelProps {
   raceId: number;
   certificationStatus: string;
   /** Provide this when the race was fetched from the CivicMirror-API (new path).
-   *  When present, official results and mock tally are fetched via the new API
+   *  When present, election results and mock tally are fetched via the new API
    *  and external voting endpoints respectively. */
   civicRaceDetail?: CivicRaceDetail;
 }
@@ -35,8 +36,8 @@ interface ComparisonRow {
   label: string;
   mockVotes: number | null;
   mockPct: number | null;
-  officialVotes: number;
-  officialPct: number | null;
+  resultVotes: number;
+  resultPct: number | null;
   isWinner: boolean;
 }
 
@@ -121,10 +122,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
       .getRaceResults(raceId)
       .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail));
 
-    const mockTallyRequest =
-      certificationStatus === 'results_pending'
-        ? Promise.resolve<TallyResponse | null>(null)
-        : votingApi.getRaceTallyByExternalId(raceId);
+    const mockTallyRequest = votingApi.getRaceTallyByExternalId(raceId);
 
     void Promise.allSettled([officialResultsRequest, mockTallyRequest])
       .then(([officialResponse, mockTallyResponse]) => {
@@ -135,7 +133,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
         if (officialResponse.status === 'fulfilled') {
           setOfficialResults(officialResponse.value);
         } else if (certificationStatus !== 'results_pending') {
-          setError(getApiErrorMessage(officialResponse.reason, 'We could not load official results right now.'));
+          setError(getApiErrorMessage(officialResponse.reason, 'We could not load election results right now.'));
         }
 
         if (mockTallyResponse.status === 'fulfilled') {
@@ -156,7 +154,49 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   const effectiveCertificationStatus = officialResults?.certification_status ?? certificationStatus;
   const rows = officialResults?.results ?? [];
   const hasUnofficialRows = rows.some((row) => row.result_type === 'unofficial');
+  const hasOfficialRows = rows.some((row) => row.result_type === 'official');
   const sourceUrl = officialResults?.source_url || rows[0]?.source_url || '';
+  const certifiedAt = rows.find((row) => row.certified_at)?.certified_at;
+
+  const resultStatus = (() => {
+    if (hasUnofficialRows) {
+      return {
+        title: 'Unofficial Results',
+        chipLabel: 'Unofficial — Subject to Change',
+        chipColor: 'warning',
+        voteColumnPrefix: 'Unofficial',
+        description: 'Reported election results are available, but they have not been certified and may change.',
+      } as const;
+    }
+
+    if (effectiveCertificationStatus === 'partial_results') {
+      return {
+        title: 'Partial Results',
+        chipLabel: 'Partial',
+        chipColor: 'warning',
+        voteColumnPrefix: 'Result',
+        description: 'Some election results are available, but the comparison may be incomplete.',
+      } as const;
+    }
+
+    if (hasOfficialRows || effectiveCertificationStatus === 'results_certified') {
+      return {
+        title: 'Certified Results',
+        chipLabel: 'Certified Final',
+        chipColor: 'success',
+        voteColumnPrefix: 'Certified',
+        description: 'Final certified election results are available for this race.',
+      } as const;
+    }
+
+    return {
+      title: 'Results Pending',
+      chipLabel: 'Pending',
+      chipColor: 'info',
+      voteColumnPrefix: 'Result',
+      description: 'Election results are not available yet.',
+    } as const;
+  })();
 
   const comparisonRows = useMemo<ComparisonRow[]>(() => {
     const mockOptions = new Map((mockTally?.options ?? []).map((option) => [normalizeLabel(option.label), option]));
@@ -170,8 +210,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
         label,
         mockVotes: row.is_write_in_aggregate ? null : mockMatch?.count ?? null,
         mockPct: row.is_write_in_aggregate ? null : normalizePercent(mockMatch?.percent),
-        officialVotes: row.vote_count,
-        officialPct: normalizePercent(row.vote_pct),
+        resultVotes: row.vote_count,
+        resultPct: normalizePercent(row.vote_pct),
         isWinner: Boolean(row.is_winner),
       };
     });
@@ -182,26 +222,32 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   }
 
   if (loading) {
-    return <LoadingSpinner message="Loading official results…" minHeight={160} />;
+    return <LoadingSpinner message="Loading election results…" minHeight={160} />;
   }
 
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (effectiveCertificationStatus === 'results_pending') {
-    return <Alert severity="info">Official results not yet available</Alert>;
-  }
-
   if (comparisonRows.length === 0) {
-    return null;
+    return <Alert severity="info">Election results are not available yet.</Alert>;
   }
 
   return (
     <Stack spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} justifyContent="space-between">
+        <Box>
+          <Typography variant="h6">{resultStatus.title}</Typography>
+          <Typography color="text.secondary" variant="body2">
+            {resultStatus.description}
+          </Typography>
+        </Box>
+        <Chip color={resultStatus.chipColor} label={resultStatus.chipLabel} size="small" sx={{ alignSelf: 'flex-start' }} />
+      </Stack>
+
       {effectiveCertificationStatus === 'partial_results' ? (
         <Alert severity="warning">
-          Official comparison is incomplete — some candidates could not be matched to the official feed.
+          Election result comparison is incomplete — some candidates could not be matched to the source feed.
         </Alert>
       ) : null}
 
@@ -212,8 +258,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
               <TableCell>Candidate</TableCell>
               <TableCell align="right">Mock Votes</TableCell>
               <TableCell align="right">Mock %</TableCell>
-              <TableCell align="right">Official Votes</TableCell>
-              <TableCell align="right">Official %</TableCell>
+              <TableCell align="right">{resultStatus.voteColumnPrefix} Votes</TableCell>
+              <TableCell align="right">{resultStatus.voteColumnPrefix} %</TableCell>
               <TableCell align="center">Winner</TableCell>
             </TableRow>
           </TableHead>
@@ -225,8 +271,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
                 </TableCell>
                 <TableCell align="right">{formatVoteCount(row.mockVotes)}</TableCell>
                 <TableCell align="right">{formatVotePercent(row.mockPct)}</TableCell>
-                <TableCell align="right">{formatVoteCount(row.officialVotes)}</TableCell>
-                <TableCell align="right">{formatVotePercent(row.officialPct)}</TableCell>
+                <TableCell align="right">{formatVoteCount(row.resultVotes)}</TableCell>
+                <TableCell align="right">{formatVotePercent(row.resultPct)}</TableCell>
                 <TableCell align="center">
                   {row.isWinner ? <CheckCircle color="success" fontSize="small" titleAccess="Winner" /> : null}
                 </TableCell>
@@ -236,20 +282,22 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
         </Table>
       </Box>
 
-      {hasUnofficialRows ? (
-        <Typography color="warning.main" variant="caption">
-          (unofficial)
-        </Typography>
-      ) : null}
+      <Stack spacing={0.5}>
+        {certifiedAt ? (
+          <Typography color="text.secondary" variant="caption">
+            Certified: {formatDateTime(certifiedAt)}
+          </Typography>
+        ) : null}
 
-      {sourceUrl ? (
-        <Typography color="text.secondary" variant="caption">
-          Source:{' '}
-          <Link href={sourceUrl} rel="noreferrer" target="_blank" underline="hover">
-            {getSourceDomain(sourceUrl)}
-          </Link>
-        </Typography>
-      ) : null}
+        {sourceUrl ? (
+          <Typography color="text.secondary" variant="caption">
+            Source:{' '}
+            <Link href={sourceUrl} rel="noreferrer" target="_blank" underline="hover">
+              {getSourceDomain(sourceUrl)}
+            </Link>
+          </Typography>
+        ) : null}
+      </Stack>
     </Stack>
   );
 }
