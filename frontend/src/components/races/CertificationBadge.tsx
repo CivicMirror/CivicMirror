@@ -12,7 +12,7 @@ const CERTIFICATION_MAP: Record<
 > = {
   upcoming: { label: 'Upcoming', color: 'default', variant: 'outlined' },
   results_pending: { label: 'Results Pending', color: 'warning', variant: 'outlined' },
-  results_certified: { label: 'Official Results', color: 'success', variant: 'filled' },
+  results_certified: { label: 'Certified Results', color: 'success', variant: 'filled' },
   partial_results: { label: 'Partial Results', color: 'warning', variant: 'filled' },
 };
 
