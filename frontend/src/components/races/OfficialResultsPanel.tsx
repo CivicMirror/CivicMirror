@@ -133,7 +133,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
 
         if (officialResponse.status === 'fulfilled') {
           setOfficialResults(officialResponse.value);
-        } else if (certificationStatus !== 'results_pending') {
+        } else {
           setError(getApiErrorMessage(officialResponse.reason, 'We could not load election results right now.'));
         }
 
@@ -211,7 +211,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   }
 
   if (comparisonRows.length === 0) {
-    return <Alert severity="info">{RESULT_STATUS_MAP.results_pending.description}</Alert>;
+    return <Alert severity="info">{resultStatus.description}</Alert>;
   }
 
   return (
