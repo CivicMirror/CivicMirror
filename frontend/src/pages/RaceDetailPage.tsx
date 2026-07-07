@@ -236,7 +236,7 @@ function RaceDetailPage() {
           <CardContent sx={{ p: { xs: 3, md: 4 } }}>
             <Stack spacing={2.5}>
               <Divider />
-              <Typography variant="h5">Official Results</Typography>
+              <Typography variant="h5">Election Results</Typography>
               <OfficialResultsPanel
                 certificationStatus={race.certification_status}
                 civicRaceDetail={civicDetail}

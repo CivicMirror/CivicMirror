@@ -2,6 +2,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle';
 import {
   Alert,
   Box,
+  Chip,
   Link,
   Stack,
   Table,
@@ -17,15 +18,16 @@ import { civicElectionsApi } from '../../api/civicElections';
 import { votingApi } from '../../api/voting';
 import type { OfficialResultRow, OfficialResultsResponse, TallyResponse } from '../../types';
 import type { CivicRaceDetail } from '../../types/civicApi';
-import { formatPercent } from '../../utils/format';
+import { formatDateTime, formatPercent } from '../../utils/format';
 import { civicResultsToLegacyResponse } from '../../utils/civicRaceAdapter';
+import { RESULT_STATUS_MAP, resolveResultStatusKey } from '../../utils/resultStatus';
 import LoadingSpinner from '../common/LoadingSpinner';
 
 interface OfficialResultsPanelProps {
   raceId: number;
   certificationStatus: string;
   /** Provide this when the race was fetched from the CivicMirror-API (new path).
-   *  When present, official results and mock tally are fetched via the new API
+   *  When present, election results and mock tally are fetched via the new API
    *  and external voting endpoints respectively. */
   civicRaceDetail?: CivicRaceDetail;
 }
@@ -35,8 +37,8 @@ interface ComparisonRow {
   label: string;
   mockVotes: number | null;
   mockPct: number | null;
-  officialVotes: number;
-  officialPct: number | null;
+  resultVotes: number;
+  resultPct: number | null;
   isWinner: boolean;
 }
 
@@ -121,10 +123,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
       .getRaceResults(raceId)
       .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail));
 
-    const mockTallyRequest =
-      certificationStatus === 'results_pending'
-        ? Promise.resolve<TallyResponse | null>(null)
-        : votingApi.getRaceTallyByExternalId(raceId);
+    const mockTallyRequest = votingApi.getRaceTallyByExternalId(raceId);
 
     void Promise.allSettled([officialResultsRequest, mockTallyRequest])
       .then(([officialResponse, mockTallyResponse]) => {
@@ -134,8 +133,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
 
         if (officialResponse.status === 'fulfilled') {
           setOfficialResults(officialResponse.value);
-        } else if (certificationStatus !== 'results_pending') {
-          setError(getApiErrorMessage(officialResponse.reason, 'We could not load official results right now.'));
+        } else {
+          setError(getApiErrorMessage(officialResponse.reason, 'We could not load election results right now.'));
         }
 
         if (mockTallyResponse.status === 'fulfilled') {
@@ -155,8 +154,30 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
 
   const effectiveCertificationStatus = officialResults?.certification_status ?? certificationStatus;
   const rows = officialResults?.results ?? [];
-  const hasUnofficialRows = rows.some((row) => row.result_type === 'unofficial');
   const sourceUrl = officialResults?.source_url || rows[0]?.source_url || '';
+
+  const { hasUnofficialRows, hasOfficialRows, certifiedAt } = useMemo(() => {
+    let unofficial = false;
+    let official = false;
+    let latestCertifiedAt: string | null = null;
+
+    for (const row of rows) {
+      if (row.result_type === 'unofficial') {
+        unofficial = true;
+      } else if (row.result_type === 'official') {
+        official = true;
+      }
+
+      if (row.certified_at && (!latestCertifiedAt || row.certified_at > latestCertifiedAt)) {
+        latestCertifiedAt = row.certified_at;
+      }
+    }
+
+    return { hasUnofficialRows: unofficial, hasOfficialRows: official, certifiedAt: latestCertifiedAt };
+  }, [rows]);
+
+  const resultStatusKey = resolveResultStatusKey(effectiveCertificationStatus, hasUnofficialRows, hasOfficialRows);
+  const resultStatus = RESULT_STATUS_MAP[resultStatusKey];
 
   const comparisonRows = useMemo<ComparisonRow[]>(() => {
     const mockOptions = new Map((mockTally?.options ?? []).map((option) => [normalizeLabel(option.label), option]));
@@ -170,8 +191,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
         label,
         mockVotes: row.is_write_in_aggregate ? null : mockMatch?.count ?? null,
         mockPct: row.is_write_in_aggregate ? null : normalizePercent(mockMatch?.percent),
-        officialVotes: row.vote_count,
-        officialPct: normalizePercent(row.vote_pct),
+        resultVotes: row.vote_count,
+        resultPct: normalizePercent(row.vote_pct),
         isWinner: Boolean(row.is_winner),
       };
     });
@@ -182,26 +203,38 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
   }
 
   if (loading) {
-    return <LoadingSpinner message="Loading official results…" minHeight={160} />;
+    return <LoadingSpinner message="Loading election results…" minHeight={160} />;
   }
 
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (effectiveCertificationStatus === 'results_pending') {
-    return <Alert severity="info">Official results not yet available</Alert>;
-  }
-
   if (comparisonRows.length === 0) {
-    return null;
+    return <Alert severity="info">{resultStatus.description}</Alert>;
   }
 
   return (
     <Stack spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} justifyContent="space-between">
+        <Box>
+          <Typography variant="h6">{resultStatus.title}</Typography>
+          <Typography color="text.secondary" variant="body2">
+            {resultStatus.description}
+          </Typography>
+        </Box>
+        <Chip
+          color={resultStatus.color}
+          label={resultStatus.label}
+          size="small"
+          sx={{ alignSelf: 'flex-start' }}
+          variant={resultStatus.variant}
+        />
+      </Stack>
+
       {effectiveCertificationStatus === 'partial_results' ? (
         <Alert severity="warning">
-          Official comparison is incomplete — some candidates could not be matched to the official feed.
+          Election result comparison is incomplete — some candidates could not be matched to the source feed.
         </Alert>
       ) : null}
 
@@ -212,8 +245,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
               <TableCell>Candidate</TableCell>
               <TableCell align="right">Mock Votes</TableCell>
               <TableCell align="right">Mock %</TableCell>
-              <TableCell align="right">Official Votes</TableCell>
-              <TableCell align="right">Official %</TableCell>
+              <TableCell align="right">{resultStatus.voteColumnPrefix} Votes</TableCell>
+              <TableCell align="right">{resultStatus.voteColumnPrefix} %</TableCell>
               <TableCell align="center">Winner</TableCell>
             </TableRow>
           </TableHead>
@@ -225,8 +258,8 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
                 </TableCell>
                 <TableCell align="right">{formatVoteCount(row.mockVotes)}</TableCell>
                 <TableCell align="right">{formatVotePercent(row.mockPct)}</TableCell>
-                <TableCell align="right">{formatVoteCount(row.officialVotes)}</TableCell>
-                <TableCell align="right">{formatVotePercent(row.officialPct)}</TableCell>
+                <TableCell align="right">{formatVoteCount(row.resultVotes)}</TableCell>
+                <TableCell align="right">{formatVotePercent(row.resultPct)}</TableCell>
                 <TableCell align="center">
                   {row.isWinner ? <CheckCircle color="success" fontSize="small" titleAccess="Winner" /> : null}
                 </TableCell>
@@ -236,20 +269,22 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
         </Table>
       </Box>
 
-      {hasUnofficialRows ? (
-        <Typography color="warning.main" variant="caption">
-          (unofficial)
-        </Typography>
-      ) : null}
+      <Stack spacing={0.5}>
+        {certifiedAt ? (
+          <Typography color="text.secondary" variant="caption">
+            Certified: {formatDateTime(certifiedAt)}
+          </Typography>
+        ) : null}
 
-      {sourceUrl ? (
-        <Typography color="text.secondary" variant="caption">
-          Source:{' '}
-          <Link href={sourceUrl} rel="noreferrer" target="_blank" underline="hover">
-            {getSourceDomain(sourceUrl)}
-          </Link>
-        </Typography>
-      ) : null}
+        {sourceUrl ? (
+          <Typography color="text.secondary" variant="caption">
+            Source:{' '}
+            <Link href={sourceUrl} rel="noreferrer" target="_blank" underline="hover">
+              {getSourceDomain(sourceUrl)}
+            </Link>
+          </Typography>
+        ) : null}
+      </Stack>
     </Stack>
   );
 }

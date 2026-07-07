@@ -116,6 +116,40 @@ Transition rules:
 
 Do not mark races certified based only on unofficial election-night numbers.
 
+### Long-term result status model
+The current launch model can keep `Race.certification_status` and per-row `OfficialResult.result_type` because those fields already support the immediate UI distinction between unofficial and certified results.
+
+For a cleaner long-term model, split the concepts that are currently blended into `certification_status`:
+
+```ts
+type ResultAvailability = 'none' | 'available';
+type ResultCertification = 'unofficial' | 'certified';
+type ResultCompleteness = 'unknown' | 'partial' | 'complete';
+type ResultSourceAuthority = 'election_office' | 'community' | 'third_party';
+```
+
+Recommended future fields:
+- `Race.result_availability` — whether any election result rows are available.
+- `Race.result_certification` — whether the available source result set is unofficial or certified.
+- `Race.result_completeness` — whether the available rows fully cover the race and map cleanly.
+- `Race.result_source_authority` — whether the data came from an election office, community entry, or third-party feed.
+- `OfficialResult.result_type` — keep this per row so mixed or corrected imports can be audited.
+
+Recommended migration path:
+1. Keep the current `certification_status` values for compatibility.
+2. Add derived helper functions in the API/frontend that calculate the new conceptual fields from `certification_status` and `OfficialResult.result_type`.
+3. Once adapters are stable, add explicit database fields for availability, certification, completeness, and source authority.
+4. Treat `results_certified` as a display state derived from `result_certification === 'certified'` and `result_completeness === 'complete'`.
+5. Treat `partial_results` as a completeness state, not as a certification state.
+
+Suggested display mapping:
+- `availability = none` → Results Pending
+- `availability = available`, `certification = unofficial` → Unofficial Results
+- `availability = available`, `certification = certified`, `completeness = complete` → Certified Results
+- `availability = available`, `completeness = partial` → Partial Results, with unofficial/certified source detail still visible
+
+This split avoids confusing phrases such as "official unofficial results" and makes it possible to show results from election-office feeds before certification without implying finality.
+
 ### Race archival after results
 Once a race's official results have been processed or the race has closed without results:
 - set `race_status = archived` to close voting and mark the race as final
@@ -139,9 +173,9 @@ For measure races:
 Add an official-results comparison section to the race detail page.
 
 Display:
-- mock tally and official results side by side
+- mock tally and election results side by side
 - counts and percentages for each candidate/option
-- status label showing whether official numbers are certified or unofficial
+- status label showing whether available numbers are unofficial, certified, partial, or pending
 - source attribution link from `source_url`
 
 UI options:
@@ -168,6 +202,7 @@ When official results do not cleanly map to CivicMirror's schema:
 - [ ] Celery task `ingest_official_results(state, election_id)` ingests and upserts official result rows
 - [ ] Race certification status transitions follow upcoming → results_pending → results_certified or partial_results
 - [ ] Candidate/measure-option matching strategy handles aliases, write-ins, and unmapped rows safely
-- [ ] Race detail page shows mock tally vs official results side by side
+- [ ] Race detail page shows mock tally vs election results side by side
+- [ ] Race detail page clearly labels unofficial results separately from certified final results
 - [ ] Status badges across list/detail views reflect certified vs pending vs partial official-result states
 - [ ] Unsupported mappings surface as `partial_results` instead of misleadingly complete data
