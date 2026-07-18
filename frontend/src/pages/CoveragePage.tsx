@@ -15,22 +15,27 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { latestStateSync, useCoverageSyncStatus } from '../hooks/useCoverageSyncStatus';
-import { COVERAGE_TIER_META, getTier, type CoverageTier } from '../utils/coverage';
+import { COVERAGE_TIER_META, getTier, type CoverageTier, type CoverageTierMap } from '../utils/coverage';
 import { timeAgo } from '../utils/timeAgo';
 import { US_STATES } from '../utils/usStates';
 
 const TIER_ICON: Record<CoverageTier, React.ReactNode> = {
   full: <CheckCircleOutline fontSize="small" />,
+  state: <Sync fontSize="small" />,
   results: <WarningAmber fontSize="small" />,
   elections: <RadioButtonUnchecked fontSize="small" />,
 };
 
-const TIER_ORDER: CoverageTier[] = ['full', 'results', 'elections'];
+const TIER_ORDER: CoverageTier[] = ['full', 'state', 'results', 'elections'];
 
-function groupByTier(states: typeof US_STATES, adapterStates?: string[]) {
+function groupByTier(
+  states: typeof US_STATES,
+  coverageTiers?: CoverageTierMap,
+  adapterStates?: string[],
+) {
   const result: Partial<Record<CoverageTier, typeof US_STATES>> = {};
   for (const s of states) {
-    const tier = getTier(s.code, adapterStates);
+    const tier = getTier(s.code, coverageTiers, adapterStates);
     (result[tier] ??= []).push(s);
   }
   return result;
@@ -45,7 +50,12 @@ function joinStateNames(states: typeof US_STATES): string {
   return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
 }
 
-function buildCoverageFaqSchema(fullTierStateNames: string, fullCount: number, resultsCount: number) {
+function buildCoverageFaqSchema(
+  fullTierStateNames: string,
+  fullCount: number,
+  stateCount: number,
+  resultsCount: number,
+) {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -55,7 +65,15 @@ function buildCoverageFaqSchema(fullTierStateNames: string, fullCount: number, r
         name: 'Which states does CivicMirror have full coverage for?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `CivicMirror has full SOS integration for ${fullTierStateNames}. Full coverage means elections, races, candidates, and live results are ingested directly from the state source.`,
+          text: `CivicMirror has full state integration for ${fullTierStateNames}. Full coverage means elections, races, candidates, and official results are ingested directly from the state source.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "What does 'State Integration' mean on CivicMirror?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'A State Integration means CivicMirror ingests elections, races, and candidates from an official state source, but does not yet ingest official results for that state.',
         },
       },
       {
@@ -71,7 +89,7 @@ function buildCoverageFaqSchema(fullTierStateNames: string, fullCount: number, r
         name: 'Does CivicMirror cover all 50 states?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `Yes. All 50 states have elections and races available via the national Civic data feed. ${fullCount} states have full SOS integration with live results, ${resultsCount} have a results adapter, and the remaining states have elections and candidate data only.`,
+          text: `Yes. All 50 states have elections and races available via the national Civic data feed. ${fullCount} states have full state integration with official results, ${stateCount} have state election/race/candidate integration, ${resultsCount} have a results adapter, and the remaining states have elections and candidate data only.`,
         },
       },
     ],
@@ -80,9 +98,10 @@ function buildCoverageFaqSchema(fullTierStateNames: string, fullCount: number, r
 
 function CoveragePage() {
   const syncStatus = useCoverageSyncStatus();
-  const byTier = groupByTier(US_STATES, syncStatus?.adapter_states);
+  const byTier = groupByTier(US_STATES, syncStatus?.coverage_tiers, syncStatus?.adapter_states);
 
   const fullCount = (byTier['full'] ?? []).length;
+  const stateCount = (byTier['state'] ?? []).length;
   const resultsCount = (byTier['results'] ?? []).length;
   const electionsCount = (byTier['elections'] ?? []).length;
   const fullTierStateNames = joinStateNames(byTier['full'] ?? []);
@@ -93,7 +112,9 @@ function CoveragePage() {
     <Stack spacing={4}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildCoverageFaqSchema(fullTierStateNames, fullCount, resultsCount)) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildCoverageFaqSchema(fullTierStateNames, fullCount, stateCount, resultsCount)),
+        }}
       />
       {/* Hero */}
       <Card>
@@ -104,19 +125,26 @@ function CoveragePage() {
             </Typography>
             <Typography color="text.secondary" maxWidth={700} variant="h6">
               CivicMirror actively tracks{' '}
-              <strong>{fullCount + resultsCount} states</strong> with dedicated data integrations.
+              <strong>{fullCount + stateCount + resultsCount} states</strong> with dedicated data integrations.
               All 50 states have elections and races available via the national Civic data feed.
             </Typography>
             <Typography color="text.secondary" maxWidth={720} variant="body1">
-              {fullCount} states — {fullTierStateNames} — have full SOS integration with direct
-              ingestion of elections, races, candidates, and live results. All remaining states
-              have race and candidate data available via the national Civic Information feed.
+              {fullCount} states — {fullTierStateNames} — have full state integration with direct
+              ingestion of elections, races, candidates, and official results. State Integration
+              states use official state sources for elections, races, and candidates while results
+              support is still being built.
             </Typography>
             <Stack direction="row" flexWrap="wrap" gap={1.5} pt={1}>
               <Chip
                 color="success"
                 icon={<CheckCircleOutline />}
                 label={`${fullCount} Full Coverage`}
+                variant="outlined"
+              />
+              <Chip
+                color="warning"
+                icon={<Sync />}
+                label={`${stateCount} State Integration`}
                 variant="outlined"
               />
               <Chip
@@ -155,6 +183,7 @@ function CoveragePage() {
               <Box display="flex" alignItems="center" gap={1}>
                 <Box color={
                   tier === 'full' ? 'success.main' :
+                  tier === 'state' ? 'warning.main' :
                   tier === 'results' ? 'warning.main' :
                   'text.disabled'
                 }>
@@ -209,7 +238,7 @@ interface StateCardProps {
 
 function StateCard({ code, name, tier, lastSyncedAt }: StateCardProps) {
   const meta = COVERAGE_TIER_META[tier];
-  const canBrowse = tier === 'full' || tier === 'results';
+  const canBrowse = tier === 'full' || tier === 'state' || tier === 'results';
 
   return (
     <Card

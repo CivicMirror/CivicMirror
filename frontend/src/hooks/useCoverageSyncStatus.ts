@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
+import type { CoverageTierMap } from '../utils/coverage';
 
 export interface SourceStatus {
   last_completed_at: string;
@@ -14,6 +15,7 @@ export interface SyncStatusResponse {
   global: Record<string, SourceStatus>;
   by_state: Record<string, Record<string, SourceStatus>>;
   adapter_states: string[];
+  coverage_tiers?: CoverageTierMap;
 }
 
 export function useCoverageSyncStatus(): SyncStatusResponse | null {

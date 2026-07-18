@@ -20,13 +20,13 @@ import { civicElectionsApi } from '../api/civicElections';
 import ErrorMessage from '../components/common/ErrorMessage';
 import LocationBar from '../components/races/LocationBar';
 import RaceList from '../components/races/RaceList';
+import { useCoverageSyncStatus } from '../hooks/useCoverageSyncStatus';
 import { useRaceFilters } from '../hooks/useRaceFilters';
 import { useRaceFiltersStore } from '../store/raceFiltersStore';
 import type { Election, PaginatedResponse, Race } from '../types';
 import { formatStateName } from '../utils/format';
 import { civicElectionToLegacy, civicRaceBaseToLegacy, electionsFromLookup, lookupResultsToLegacyPaged } from '../utils/civicRaceAdapter';
 import { getTimeBounds } from '../utils/timeFilter';
-import { COVERAGE } from '../utils/coverage';
 
 function HomePage() {
   const {
@@ -43,6 +43,10 @@ function HomePage() {
   const setElectionId = useRaceFiltersStore((state) => state.setElectionId);
   const contestType = useRaceFiltersStore((state) => state.contestType);
   const timeBounds = getTimeBounds(timeFilter);
+  const syncStatus = useCoverageSyncStatus();
+  const integrationCount = syncStatus?.coverage_tiers
+    ? Object.values(syncStatus.coverage_tiers).filter((tier) => tier !== 'elections').length
+    : syncStatus?.adapter_states.length;
 
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
@@ -276,7 +280,7 @@ function HomePage() {
                 <Typography color="text.secondary" display="block" variant="caption">states covered</Typography>
               </Box>
               <Box>
-                <Typography fontWeight={700} variant="subtitle1">{Object.values(COVERAGE).length}</Typography>
+                <Typography fontWeight={700} variant="subtitle1">{integrationCount ?? '...'}</Typography>
                 <Typography color="text.secondary" display="block" variant="caption">live data adapters</Typography>
               </Box>
               {activeRaceCount !== null && (

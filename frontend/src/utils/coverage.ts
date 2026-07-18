@@ -1,4 +1,4 @@
-export type CoverageTier = 'full' | 'results' | 'elections';
+export type CoverageTier = 'full' | 'state' | 'results' | 'elections';
 
 export interface CoverageTierMeta {
   label: string;
@@ -6,12 +6,20 @@ export interface CoverageTierMeta {
   color: 'success' | 'warning' | 'default';
 }
 
+export type CoverageTierMap = Partial<Record<string, CoverageTier>>;
+
 export const COVERAGE_TIER_META: Record<CoverageTier, CoverageTierMeta> = {
   full: {
     label: 'Full Coverage',
     description:
-      'Dedicated state SOS integration — elections, races, candidates, and live results are ingested directly from the state source.',
+      'Dedicated state integration — elections, races, candidates, and official results are ingested directly from the state source.',
     color: 'success',
+  },
+  state: {
+    label: 'State Integration',
+    description:
+      'Dedicated state source ingests elections, races, and candidates. Results ingestion is not available yet.',
+    color: 'warning',
   },
   results: {
     label: 'Results Adapter',
@@ -28,54 +36,19 @@ export const COVERAGE_TIER_META: Record<CoverageTier, CoverageTierMeta> = {
 };
 
 /**
- * Explicit coverage tier per state code.
- * States not listed here default to 'elections'.
- */
-export const COVERAGE: Partial<Record<string, CoverageTier>> = {
-  // Full SOS integration + live results
-  WV: 'full',
-  CO: 'full',
-  SC: 'full',
-  MA: 'full',
-  VA: 'full',
-  AZ: 'full',
-  NC: 'full',
-
-  // Results adapter (election-night results when results_url is configured)
-  AR: 'results',
-  CT: 'results',
-  IA: 'results',
-  AK: 'results',
-  DE: 'results',
-  HI: 'results',
-  ID: 'results',
-  IN: 'results',
-  KS: 'results',
-  LA: 'results',
-  ME: 'results',
-  MS: 'results',
-  MT: 'results',
-  ND: 'results',
-  NE: 'results',
-  NH: 'results',
-  NV: 'results',
-  OK: 'results',
-  RI: 'results',
-  SD: 'results',
-  VT: 'results',
-  WI: 'results',
-  WY: 'results',
-};
-
-/**
  * Returns the coverage tier for a state.
- * adapterStates (from /api/coverage/sync-status/) promotes unlisted states to
- * 'results' automatically when a new results adapter is registered on the backend.
+ * coverageTiers comes from /api/coverage/sync-status/ and is the source of
+ * truth. adapterStates is kept only as a compatibility fallback for older API
+ * responses that predate coverage_tiers.
  */
-export function getTier(stateCode: string, adapterStates?: string[]): CoverageTier {
+export function getTier(
+  stateCode: string,
+  coverageTiers?: CoverageTierMap,
+  adapterStates?: string[],
+): CoverageTier {
   const code = stateCode.toUpperCase();
-  const hardcoded = COVERAGE[code];
-  if (hardcoded) return hardcoded;
+  const tier = coverageTiers?.[code];
+  if (tier) return tier;
   if (adapterStates?.includes(code)) return 'results';
   return 'elections';
 }
