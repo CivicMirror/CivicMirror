@@ -12,25 +12,25 @@ export const COVERAGE_TIER_META: Record<CoverageTier, CoverageTierMeta> = {
   full: {
     label: 'Full Coverage',
     description:
-      'Dedicated state integration — elections, races, candidates, and official results are ingested directly from the state source.',
+      'Has dedicated backend support for the full core workflow: election discovery, race and candidate creation, and official results ingestion for federal, statewide, and state legislative races. Missing items, if any, are enhanced data such as local races, precinct detail, ballot-measure depth, biographies, GIS boundaries, or historical backfills.',
     color: 'success',
   },
   state: {
     label: 'State Integration',
     description:
-      'Dedicated state source ingests elections, races, and candidates. Results ingestion is not available yet.',
+      'Has a dedicated backend state source for pre-election data: elections, races, and candidates can be created from official state data. Missing official results ingestion, so result comparison depends on a future adapter or other configured result source.',
     color: 'warning',
   },
   results: {
     label: 'Results Adapter',
     description:
-      'Live election-night results available when configured per election. Elections and races come from the national Civic data feed.',
+      'Has a backend results adapter that can ingest official vote totals when an election is configured for that source. Missing a dedicated state election/race/candidate pipeline, so race setup still depends on the national Civic feed, existing records, or manual configuration.',
     color: 'warning',
   },
   elections: {
     label: 'Elections Only',
     description:
-      'Races and candidates are available via the national Civic data feed. No dedicated results adapter yet.',
+      'Has baseline election and race availability through the national Civic data feed. Missing dedicated state ingestion and missing a dedicated results adapter, so candidate/race completeness and official results are limited compared with state-specific integrations.',
     color: 'default',
   },
 };
