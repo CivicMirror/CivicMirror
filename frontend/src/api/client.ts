@@ -63,16 +63,23 @@ export const getApiFieldErrors = (error: unknown): Record<string, string> => {
     return {};
   }
 
-  return Object.entries(error.response.data as Record<string, unknown>).reduce<Record<string, string>>(
-    (accumulator, [key, value]) => {
-      const message = flattenErrorValue(value);
-      if (message) {
-        accumulator[key] = message;
-      }
+  const data = error.response.data as Record<string, unknown>;
+  // The backend's custom_exception_handler wraps validation errors as
+  // { detail, errors: { field: [...] }, status_code }. Prefer that nested
+  // shape when present; fall back to a flat field-error dict otherwise.
+  const fieldErrors =
+    typeof data.errors === 'object' && data.errors ? (data.errors as Record<string, unknown>) : data;
+
+  return Object.entries(fieldErrors).reduce<Record<string, string>>((accumulator, [key, value]) => {
+    if (key === 'non_field_errors') {
       return accumulator;
-    },
-    {},
-  );
+    }
+    const message = flattenErrorValue(value);
+    if (message) {
+      accumulator[key] = message;
+    }
+    return accumulator;
+  }, {});
 };
 
 export const getApiErrorMessage = (error: unknown, fallback = 'Something went wrong.') => {
@@ -82,14 +89,16 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Something went wr
 
   const data = error.response?.data;
   if (typeof data === 'object' && data) {
-    const detail = flattenErrorValue((data as Record<string, unknown>).detail);
-    if (detail) return detail;
+    const record = data as Record<string, unknown>;
+    const nestedErrors =
+      typeof record.errors === 'object' && record.errors ? (record.errors as Record<string, unknown>) : null;
 
-    const nonFieldErrors = flattenErrorValue((data as Record<string, unknown>).non_field_errors);
+    const nonFieldErrors = flattenErrorValue(nestedErrors?.non_field_errors ?? record.non_field_errors);
     if (nonFieldErrors) return nonFieldErrors;
 
-    // Flatten all field errors into a readable message
-    const fieldMessages = Object.entries(data as Record<string, unknown>)
+    // Flatten all field errors (nested "errors" shape if present, else flat) into a readable message
+    const fieldMessages = Object.entries(nestedErrors ?? record)
+      .filter(([field]) => field !== 'non_field_errors' && field !== 'detail' && field !== 'status_code')
       .map(([field, value]) => {
         const msg = flattenErrorValue(value);
         return msg ? `${field}: ${msg}` : null;
@@ -97,6 +106,9 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Something went wr
       .filter(Boolean)
       .join(' | ');
     if (fieldMessages) return fieldMessages;
+
+    const detail = flattenErrorValue(record.detail);
+    if (detail) return detail;
   }
 
   if (typeof data === 'string' && data) return data;

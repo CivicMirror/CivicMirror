@@ -249,6 +249,10 @@ function HomePage() {
 
   return (
     <Stack spacing={4}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_SCHEMA) }}
+      />
       <Card>
         <CardContent sx={{ p: { xs: 3, md: 5 } }}>
           <Stack spacing={2.5}>
@@ -392,79 +396,17 @@ function HomePage() {
       ) : (
         <RaceList data={data} loading={loading} onPageChange={setPage} page={page} />
       )}
-      <HomeFAQ />
     </Stack>
   );
 }
 
-const HOME_SCHEMA = [
-  {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'CivicMirror',
-    url: 'https://civicmirror.app/',
-    description: 'Open civic engagement platform for unrestricted mock voting on real U.S. elections',
-    foundingDate: '2026',
-    sameAs: [],
-  },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What is CivicMirror?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'CivicMirror is an open civic engagement platform that imports real U.S. election data and allows anyone to cast a mock vote, regardless of age, citizenship, or country of residence. After official results are certified, the platform compares mock vote outcomes against real-world results.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Is CivicMirror an official voting platform?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'No. CivicMirror is not an official election authority and is not affiliated with any government agency or political organization. Mock votes on CivicMirror have no legal effect.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Who can participate in CivicMirror mock votes?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Anyone worldwide can browse races and cast mock votes on CivicMirror. There are no eligibility restrictions based on age, citizenship, or location.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Where does CivicMirror get its election data?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'CivicMirror imports real election data from the Google Civic Information API, OpenFEC, Open States, OpenElections, and direct integrations with state Secretary of State offices. All 50 states are covered.',
-        },
-      },
-    ],
-  },
-];
-
-function HomeFAQ() {
-  const faqs = HOME_SCHEMA[1].mainEntity as Array<{ '@type': string; name: string; acceptedAnswer: { '@type': string; text: string } }>;
-  return (
-    <Stack spacing={2} component="section" aria-label="Frequently asked questions">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_SCHEMA) }}
-      />
-      <Typography variant="h5" component="h2">Frequently Asked Questions</Typography>
-      {faqs.map((faq) => (
-        <Stack key={faq.name} spacing={0.5}>
-          <Typography variant="subtitle1" fontWeight={700}>{faq.name}</Typography>
-          <Typography color="text.secondary" variant="body2">{faq.acceptedAnswer.text}</Typography>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
-
-export { HomeFAQ };
+const ORGANIZATION_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'CivicMirror',
+  url: 'https://civicmirror.app/',
+  description: 'Open civic engagement platform for unrestricted mock voting on real U.S. elections',
+  foundingDate: '2026',
+  sameAs: [],
+};
 export default HomePage;

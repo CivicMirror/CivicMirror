@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import ContactPage from './pages/ContactPage';
 import CoveragePage from './pages/CoveragePage';
+import FaqPage from './pages/FaqPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -29,6 +31,8 @@ function App() {
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/coverage" element={<CoveragePage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route
           path="/races/submit"
           element={

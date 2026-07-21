@@ -1,5 +1,6 @@
 import InfoOutlined from '@mui/icons-material/InfoOutlined';
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container, Link, Stack, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 
 function DisclaimerFooter() {
   return (
@@ -19,6 +20,14 @@ function DisclaimerFooter() {
             do not represent official results.
           </Typography>
         </Box>
+        <Stack direction="row" spacing={2} sx={{ mt: 1.5 }}>
+          <Link color="text.secondary" component={RouterLink} to="/faq" underline="hover" variant="body2">
+            FAQ
+          </Link>
+          <Link color="text.secondary" component={RouterLink} to="/contact" underline="hover" variant="body2">
+            Contact Us
+          </Link>
+        </Stack>
         <Typography
           color="text.secondary"
           sx={{ mt: 1, textAlign: 'right' }}
