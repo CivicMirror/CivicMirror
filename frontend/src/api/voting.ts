@@ -30,7 +30,7 @@ import { apiClient } from './client';export const votingApi = {
     }
   },
   async getMyVotes() {
-    const response = await apiClient.get<MyVote[]>('/api/users/me/votes/');
+    const response = await apiClient.get<MyVote[]>('/api/users/votes/');
     return response.data;
   },
 };

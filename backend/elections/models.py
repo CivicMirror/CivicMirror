@@ -4,7 +4,9 @@ from django.db import models
 
 class PublicRaceManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().exclude(source='community')
+        return super().get_queryset().exclude(
+            models.Q(source='community') & ~models.Q(community_status=Race.CommunityStatus.ACTIVE)
+        )
 
 
 class CommunityRaceManager(models.Manager):
