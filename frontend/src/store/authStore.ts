@@ -28,13 +28,16 @@ const clearPersistedToken = () => {
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
 };
 
+const initialToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+let hasStartedRestore = false;
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  token: null,
+  token: initialToken,
   user: null,
   profile: null,
-  isAuthenticated: false,
+  isAuthenticated: Boolean(initialToken),
   isLoading: false,
-  isRestoring: false,
+  isRestoring: Boolean(initialToken),
   async login(credentials) {
     set({ isLoading: true });
     try {
@@ -91,9 +94,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
   restoreFromStorage() {
-    if (get().isRestoring) {
+    if (hasStartedRestore) {
       return;
     }
+    hasStartedRestore = true;
 
     const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!token) {

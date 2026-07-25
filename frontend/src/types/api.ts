@@ -163,7 +163,7 @@ export interface ProfileUpdatePayload {
 }
 
 export interface VotePayload {
-  candidate_id?: number;
+  candidate_ids?: number[];
   measure_option_id?: number;
 }
 

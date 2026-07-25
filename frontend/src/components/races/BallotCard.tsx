@@ -145,13 +145,13 @@ function BallotCard({ race, tally, onVoteSuccess, onSubmitVote }: BallotCardProp
       const vote = await (onSubmitVote
         ? onSubmitVote(
             selectedChoice.type === 'candidate'
-              ? { candidate_id: selectedChoice.id }
+              ? { candidate_ids: [selectedChoice.id] }
               : { measure_option_id: selectedChoice.id },
           )
         : votingApi.postVote(
             race.id,
             selectedChoice.type === 'candidate'
-              ? { candidate_id: selectedChoice.id }
+              ? { candidate_ids: [selectedChoice.id] }
               : { measure_option_id: selectedChoice.id },
           ));
       onVoteSuccess(vote, selectedChoice);
