@@ -45,7 +45,7 @@ const isConflictPayload = (data: unknown): data is Record<string, unknown> => {
 export const communityRaceApi = {
   async submitCommunityRace(payload: CommunityRacePayload & { force_submit?: boolean }) {
     try {
-      const response = await apiClient.post<{ id: number } | ConflictResponse>('/api/races/local/', payload);
+      const response = await apiClient.post<{ id: number } | ConflictResponse>('/api/races/community/', payload);
       return isConflictPayload(response.data) ? normalizeConflictResponse(response.data) : response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && isConflictPayload(error.response?.data)) {
