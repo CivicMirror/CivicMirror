@@ -283,14 +283,14 @@ function ProfilePage() {
                 {votes.map((vote) => (
                   <Stack key={vote.id} spacing={0.75}>
                     <Typography fontWeight={700} variant="h6">
-                      {vote.office_title}
+                      {vote.race_title}
                     </Typography>
                     <Typography color="text.secondary" variant="body2">
-                      {vote.election_name} · {vote.jurisdiction}
+                      {vote.election_name}
                     </Typography>
-                    <Typography variant="body1">Your choice: {vote.choice.label}</Typography>
+                    <Typography variant="body1">Your choice: {vote.selection_summary}</Typography>
                     <Typography color="text.secondary" variant="body2">
-                      Cast {formatDateTime(vote.cast_at)} · Race status: {vote.race_status}
+                      Cast {formatDateTime(vote.created_at)}
                     </Typography>
                   </Stack>
                 ))}

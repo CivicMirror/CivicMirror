@@ -176,13 +176,11 @@ export interface VoteResponse {
 
 export interface MyVote {
   id: number;
-  race_id: number;
+  race: number;
+  race_title: string;
   election_name: string;
-  office_title: string;
-  jurisdiction: string;
-  cast_at: string;
-  choice: VoteChoice;
-  race_status: string;
+  selection_summary: string;
+  created_at: string;
 }
 
 export type VoteErrorCode =
