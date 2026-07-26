@@ -9,6 +9,8 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import type { Race } from '../../types';
 import { formatDate } from '../../utils/format';
+import ElectionTypePill from './ElectionTypePill';
+import PartyPill from './PartyPill';
 
 interface RaceCardProps {
   race: Race;
@@ -37,15 +39,17 @@ function RaceCard({ race }: RaceCardProps) {
     <Card sx={{ borderRadius: 1 }}>
       <CardActionArea component={RouterLink} to={`/races/${race.id}`}>
         <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1} sx={{ mb: 0.25 }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              noWrap
-              sx={{ flex: 1, minWidth: 0 }}
-            >
-              {race.office_title}
-            </Typography>
+          <Typography
+            variant="subtitle1"
+            fontWeight={600}
+            noWrap
+            sx={{ mb: 0.25 }}
+          >
+            {race.office_title}
+          </Typography>
+          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={0.5} sx={{ mb: 0.25 }}>
+            <ElectionTypePill election_type={race.election.election_type} />
+            <PartyPill election_type={race.election.election_type} normalized_party={race.normalized_party} />
             <Chip color={status.color} label={status.label} size="small" />
           </Stack>
           <Typography variant="caption" color="text.secondary" noWrap>

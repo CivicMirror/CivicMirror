@@ -9,11 +9,22 @@ export interface CivicElectionCycle {
   cycle_end: string;
 }
 
+export type CivicElectionType =
+  | 'general'
+  | 'primary'
+  | 'primary_runoff'
+  | 'special'
+  | 'general_runoff'
+  | 'municipal'
+  | 'party'
+  | 'other';
+
 export interface CivicElection {
   id: number;
   source_id: string;
   name: string;
   election_date: string;
+  election_type: CivicElectionType;
   jurisdiction_level: 'national' | 'state' | 'local';
   state: string | null;
   status: 'upcoming' | 'active' | 'results_pending' | 'results_certified' | 'archived';
@@ -67,6 +78,8 @@ export interface CivicRaceBase {
   vote_method: CivicVoteMethod;
   ocd_division_id: string;
   last_synced_at: string | null;
+  party: string;
+  normalized_party: string;
 }
 
 export interface CivicRaceDetail extends CivicRaceBase {

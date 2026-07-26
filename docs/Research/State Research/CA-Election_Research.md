@@ -118,6 +118,12 @@ Official documentation available as PDF:
 
 ---
 
+## Additional Resources
+
+- **California Association of Clerks and Election Officials (CACEO)** — https://caceo.memberclicks.net/ — county-level clerk/elections official directory and general CACEO info. Found while researching media contacts (2026-07-24); not yet verified for accuracy/currency, but worth checking if county-level contacts or context are needed.
+
+---
+
 ## Notes
 
 - API endpoints change per election cycle (new contest IDs each election)

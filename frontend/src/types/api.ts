@@ -19,6 +19,7 @@ export interface Election {
   id: number;
   name: string;
   election_date: string;
+  election_type: string;
   jurisdiction_level: 'national' | 'state' | 'local';
   state?: string;
   status: string;
@@ -100,6 +101,8 @@ export interface Race {
   office_title: string;
   jurisdiction: string;
   geography_scope: string;
+  party?: string;
+  normalized_party?: string;
   certification_status: 'upcoming' | 'results_pending' | 'results_certified' | 'partial_results';
   race_status: 'draft' | 'pending_review' | 'active' | 'cancelled' | 'archived';
   source: 'civic_api' | 'community';
