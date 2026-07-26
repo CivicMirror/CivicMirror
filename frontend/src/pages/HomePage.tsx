@@ -170,6 +170,7 @@ function HomePage() {
                   id: r.election,
                   name: '',
                   election_date: '',
+                  election_type: 'other',
                   jurisdiction_level: 'state',
                   status: 'active',
                 },

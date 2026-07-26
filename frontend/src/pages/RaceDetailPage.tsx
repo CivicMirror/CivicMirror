@@ -20,7 +20,9 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import AlreadyVotedPanel from '../components/races/AlreadyVotedPanel';
 import BallotCard from '../components/races/BallotCard';
 import CertificationBadge from '../components/races/CertificationBadge';
+import ElectionTypePill from '../components/races/ElectionTypePill';
 import OfficialResultsPanel from '../components/races/OfficialResultsPanel';
+import PartyPill from '../components/races/PartyPill';
 import StatusChip from '../components/races/StatusChip';
 import TallyBars from '../components/races/TallyBars';
 import { useAuth } from '../hooks/useAuth';
@@ -167,6 +169,8 @@ function RaceDetailPage() {
 
               <Stack alignItems={{ xs: 'flex-start', md: 'flex-end' }} gap={1}>
                 <Chip label={formatRaceSource(race.source)} variant="filled" />
+                <ElectionTypePill election_type={race.election.election_type} />
+                <PartyPill election_type={race.election.election_type} normalized_party={race.normalized_party} />
                 <StatusChip race_status={race.race_status} />
                 {race.certification_status !== 'upcoming' ? (
                   <CertificationBadge status={race.certification_status} />
