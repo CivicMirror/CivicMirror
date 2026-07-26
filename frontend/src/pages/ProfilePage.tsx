@@ -14,7 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { authApi } from '../api/auth';
 import { getApiErrorMessage, getApiFieldErrors } from '../api/client';
@@ -49,7 +49,7 @@ function ProfilePage() {
   const [votesError, setVotesError] = useState<string | null>(null);
 
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     setError: setFieldError,
@@ -188,69 +188,93 @@ function ProfilePage() {
             {error ? <Alert severity="error">{error}</Alert> : null}
 
             <Stack component="form" onSubmit={onSubmit} spacing={2.5}>
-              <TextField
-                error={Boolean(errors.age_range)}
-                fullWidth
-                helperText={errors.age_range?.message}
-                label="Age range"
-                select
-                {...register('age_range')}
-              >
-                <MenuItem value="">Prefer not to say</MenuItem>
-                {ageRanges.map((ageRange) => (
-                  <MenuItem key={ageRange} value={ageRange}>
-                    {ageRange}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Controller
+                control={control}
+                name="age_range"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    error={Boolean(errors.age_range)}
+                    fullWidth
+                    helperText={errors.age_range?.message}
+                    label="Age range"
+                    select
+                  >
+                    <MenuItem value="">Prefer not to say</MenuItem>
+                    {ageRanges.map((ageRange) => (
+                      <MenuItem key={ageRange} value={ageRange}>
+                        {ageRange}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
 
-              <TextField
-                error={Boolean(errors.country)}
-                fullWidth
-                helperText={errors.country?.message}
-                label="Country"
-                select
-                {...register('country')}
-              >
-                <MenuItem value="">Prefer not to say</MenuItem>
-                {COUNTRIES.map((c) => (
-                  <MenuItem key={c.code} value={c.code}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Controller
+                control={control}
+                name="country"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    error={Boolean(errors.country)}
+                    fullWidth
+                    helperText={errors.country?.message}
+                    label="Country"
+                    select
+                  >
+                    <MenuItem value="">Prefer not to say</MenuItem>
+                    {COUNTRIES.map((c) => (
+                      <MenuItem key={c.code} value={c.code}>
+                        {c.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
 
-              <TextField
-                error={Boolean(errors.us_state)}
-                fullWidth
-                helperText={errors.us_state?.message}
-                label="U.S. state"
-                select
-                {...register('us_state')}
-              >
-                <MenuItem value="">No preference</MenuItem>
-                {US_STATES.map((stateOption) => (
-                  <MenuItem key={stateOption.code} value={stateOption.code}>
-                    {stateOption.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Controller
+                control={control}
+                name="us_state"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    error={Boolean(errors.us_state)}
+                    fullWidth
+                    helperText={errors.us_state?.message}
+                    label="U.S. state"
+                    select
+                  >
+                    <MenuItem value="">No preference</MenuItem>
+                    {US_STATES.map((stateOption) => (
+                      <MenuItem key={stateOption.code} value={stateOption.code}>
+                        {stateOption.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
 
-              <TextField
-                error={Boolean(errors.gender)}
-                fullWidth
-                helperText={errors.gender?.message}
-                label="Gender"
-                select
-                {...register('gender')}
-              >
-                <MenuItem value="">Prefer not to say</MenuItem>
-                {genderOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Controller
+                control={control}
+                name="gender"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    error={Boolean(errors.gender)}
+                    fullWidth
+                    helperText={errors.gender?.message}
+                    label="Gender"
+                    select
+                  >
+                    <MenuItem value="">Prefer not to say</MenuItem>
+                    {genderOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
 
               <Button disabled={isSubmitting} startIcon={<Save />} type="submit" variant="contained">
                 Save profile
