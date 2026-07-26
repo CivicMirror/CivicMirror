@@ -1,5 +1,6 @@
 # Secrets — never commit
 docs/Secrets/
+docs/security-review.md
 
 # Local dev reference (not for repo)
 docs/dev-commands.md
