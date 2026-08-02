@@ -5,11 +5,19 @@ interface PartyPillProps {
   election_type: string;
 }
 
-// Contrast-checked against white: REP red ~4.55:1, DEM blue ~7.9:1 (WCAG AA).
+// Contrast-checked against white: REP red ~4.55:1, DEM blue ~7.9:1,
+// CON navy ~16:1, WFP orange ~4.9:1 (WCAG AA requires >=4.5:1).
 // Map lookup with a gray fallback so a third-party color is a one-line addition later.
 const PARTY_COLORS: Record<string, string> = {
   DEM: '#0044c9',
   REP: '#e81b23',
+  // NY Conservative Party (cpnys.org) official navy blue.
+  CON: '#002244',
+  // Working Families Party's brand "Working Orange" (#F4563B) is only
+  // ~3.36:1 against white -- fails WCAG AA for this chip's small text.
+  // Darkened along the same hue/saturation to ~4.9:1 rather than switching
+  // to an unrelated color. See issue #124 / CivicMirror-API#124.
+  WFP: '#D92A0C',
 };
 
 const FALLBACK_COLOR = '#616161';
