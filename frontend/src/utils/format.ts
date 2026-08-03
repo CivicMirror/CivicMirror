@@ -164,6 +164,7 @@ export const buildTallyOptions = (
     id: typeof entry.id === 'number' ? entry.id : Number(entry.id) || index + 1,
     label: entry.label,
     type,
+    party: entry.party,
     count: entry.votes,
     percent: normalizePercentage(entry.percentage) ?? 0,
   }));

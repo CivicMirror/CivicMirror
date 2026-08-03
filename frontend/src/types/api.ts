@@ -60,6 +60,7 @@ export interface TallyOption {
   id: number;
   label: string;
   type: 'candidate' | 'measure_option';
+  party?: string;
   count: number;
   percent: number;
 }

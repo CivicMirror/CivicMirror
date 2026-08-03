@@ -25,9 +25,16 @@ function TallyBars({ options, totalVotes, compact = false, showTotal = true }: T
         return (
           <Stack key={`${option.type}-${option.id}`} spacing={0.75}>
             <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
-              <Typography fontWeight={isLeading ? 700 : 500} variant={compact ? 'body2' : 'body1'}>
-                {option.label}
-              </Typography>
+              <Stack alignItems="baseline" direction="row" flexWrap="wrap" gap={0.75}>
+                <Typography fontWeight={isLeading ? 700 : 500} variant={compact ? 'body2' : 'body1'}>
+                  {option.label}
+                </Typography>
+                {option.party ? (
+                  <Typography color="text.secondary" variant="body2">
+                    {option.party}
+                  </Typography>
+                ) : null}
+              </Stack>
               <Typography color="text.secondary" variant={compact ? 'caption' : 'body2'}>
                 {option.count} · {formatPercent(option.percent)}
               </Typography>

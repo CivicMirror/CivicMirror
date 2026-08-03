@@ -66,16 +66,22 @@ function RaceDetailPage() {
         const detail = await civicElectionsApi.getRaceDetail(raceId);
         if (!isActive) return;
 
-        // Phase 2: fetch election and tally concurrently
-        const [election, tallyResponse] = await Promise.all([
+        // Phase 2: fetch election, tally, and (if signed in) the viewer's existing votes concurrently
+        const [election, tallyResponse, myVotes] = await Promise.all([
           civicElectionsApi.getElection(detail.election),
           votingApi.getRaceTally(raceId),
+          isAuthenticated ? votingApi.getMyVotes().catch(() => []) : Promise.resolve([]),
         ]);
         if (!isActive) return;
 
         setCivicDetail(detail);
         setRace(civicRaceDetailToLegacy(detail, election));
         if (tallyResponse) setTally(tallyResponse);
+
+        const existingVote = myVotes.find((vote) => vote.race === raceId);
+        if (existingVote) {
+          setRecordedChoice({ type: 'unknown', id: 0, label: existingVote.selection_summary });
+        }
       } catch (requestError) {
         if (isActive) {
           setError(getApiErrorMessage(requestError, 'We could not load this race right now.'));
@@ -88,7 +94,7 @@ function RaceDetailPage() {
     return () => {
       isActive = false;
     };
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   if (loading) {
     return <LoadingSpinner message="Loading race details…" />;
