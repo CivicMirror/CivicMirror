@@ -4,26 +4,9 @@ import { apiClient } from './client';export const votingApi = {
     const response = await apiClient.post<VoteResponse>(`/api/races/${raceId}/vote/`, payload);
     return response.data;
   },
-  async postVoteByExternalId(externalRaceId: number, payload: VotePayload) {
-    const response = await apiClient.post<VoteResponse>(
-      `/api/races/ext/${externalRaceId}/vote/`,
-      payload,
-    );
-    return response.data;
-  },
   async getRaceTally(raceId: number): Promise<TallyResponse | null> {
     try {
       const response = await apiClient.get<TallyResponse>(`/api/races/${raceId}/tally/`);
-      return response.data;
-    } catch {
-      return null;
-    }
-  },
-  async getRaceTallyByExternalId(externalRaceId: number): Promise<TallyResponse | null> {
-    try {
-      const response = await apiClient.get<TallyResponse>(
-        `/api/races/ext/${externalRaceId}/tally/`,
-      );
       return response.data;
     } catch {
       return null;

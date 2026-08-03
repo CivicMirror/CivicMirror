@@ -69,7 +69,7 @@ function RaceDetailPage() {
         // Phase 2: fetch election and tally concurrently
         const [election, tallyResponse] = await Promise.all([
           civicElectionsApi.getElection(detail.election),
-          votingApi.getRaceTallyByExternalId(raceId),
+          votingApi.getRaceTally(raceId),
         ]);
         if (!isActive) return;
 
@@ -137,13 +137,13 @@ function RaceDetailPage() {
     );
 
     void votingApi
-      .getRaceTallyByExternalId(raceId)
+      .getRaceTally(raceId)
       .then((nextTally) => { if (nextTally) setTally(nextTally); })
       .catch(() => undefined);
   };
 
   const handleSubmitVote = (payload: VotePayload): Promise<VoteResponse> =>
-    votingApi.postVoteByExternalId(raceId, payload);
+    votingApi.postVote(raceId, payload);
 
   return (
     <Stack spacing={3}>

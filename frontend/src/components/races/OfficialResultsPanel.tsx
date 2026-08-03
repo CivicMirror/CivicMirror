@@ -123,7 +123,7 @@ function OfficialResultsPanel({ raceId, certificationStatus, civicRaceDetail }: 
       .getRaceResults(raceId)
       .then((results) => civicResultsToLegacyResponse(results, civicRaceDetail));
 
-    const mockTallyRequest = votingApi.getRaceTallyByExternalId(raceId);
+    const mockTallyRequest = votingApi.getRaceTally(raceId);
 
     void Promise.allSettled([officialResultsRequest, mockTallyRequest])
       .then(([officialResponse, mockTallyResponse]) => {
