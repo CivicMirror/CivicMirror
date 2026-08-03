@@ -89,6 +89,16 @@ function matchesContestType(race: Race, contestType: string | null | undefined):
   return race.ballot_type === contestType;
 }
 
+function matchesSearch(race: Race, search: string | null | undefined): boolean {
+  if (!search) return true;
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+  return (
+    race.office_title.toLowerCase().includes(needle) ||
+    race.jurisdiction.toLowerCase().includes(needle)
+  );
+}
+
 /**
  * Converts a `/api/v1/lookup/` response into the PaginatedResponse<Race> shape
  * that the existing RaceList/RaceCard components expect.
@@ -102,6 +112,7 @@ export function lookupResultsToLegacyPaged(
   page: number,
   contestType?: string | null,
   timeBounds?: { election_date__gte?: string; election_date__lte?: string },
+  search?: string | null,
 ): PaginatedResponse<Race> {
   const allRaces: Race[] = results.flatMap(({ election, races }) => {
     if (timeBounds) {
@@ -112,7 +123,9 @@ export function lookupResultsToLegacyPaged(
     return races.map((race) => civicRaceDetailToLegacy(race, election));
   });
 
-  const filtered = allRaces.filter((race) => matchesContestType(race, contestType));
+  const filtered = allRaces.filter(
+    (race) => matchesContestType(race, contestType) && matchesSearch(race, search),
+  );
 
   const start = (page - 1) * PAGE_SIZE;
   const pageRaces = filtered.slice(start, start + PAGE_SIZE);

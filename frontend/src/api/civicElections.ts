@@ -48,6 +48,7 @@ export const civicElectionsApi = {
     jurisdiction_level?: 'national' | 'state' | 'local';
     election_date__gte?: string;
     election_date__lte?: string;
+    search?: string;
     page?: number;
   } = {}): Promise<CivicPaginatedResponse<CivicRaceBase>> {
     const query: Record<string, string> = {};
@@ -59,6 +60,7 @@ export const civicElectionsApi = {
     if (params.jurisdiction_level) query.jurisdiction_level = params.jurisdiction_level;
     if (params.election_date__gte) query.election_date__gte = params.election_date__gte;
     if (params.election_date__lte) query.election_date__lte = params.election_date__lte;
+    if (params.search) query.search = params.search;
     if (params.page) query.page = String(params.page);
     return civicApiClient.fetch<CivicPaginatedResponse<CivicRaceBase>>('/api/v1/races/', query);
   },

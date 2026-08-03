@@ -12,6 +12,7 @@ import {
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
@@ -51,6 +52,8 @@ function HomePage() {
   const [page, setPage] = useState(1);
   const [requestKey, setRequestKey] = useState(0);
   const [data, setData] = useState<PaginatedResponse<Race> | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   // elections derived from lookup response (ZIP scope) or from race data (other scopes)
   const [lookupElections, setLookupElections] = useState<Election[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,8 +67,13 @@ function HomePage() {
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
     setPage(1);
-  }, [address, contestType, effectiveState, electionId, resolvedScope, timeFilter, zip]);
+  }, [address, contestType, effectiveState, electionId, resolvedScope, search, timeFilter, zip]);
 
   const hasIncompleteLocation =
     (resolvedScope === 'state' && !effectiveState) ||
@@ -102,7 +110,7 @@ function HomePage() {
         .then((results) => {
           if (!isActive) return;
           setLookupElections(electionsFromLookup(results));
-          setData(lookupResultsToLegacyPaged(results, page, contestType, timeBounds));
+          setData(lookupResultsToLegacyPaged(results, page, contestType, timeBounds, search));
         })
         .catch((requestError: unknown) => {
           if (isActive) {
@@ -140,6 +148,7 @@ function HomePage() {
             jurisdiction_level: jurisdictionLevelFilter,
             election_date__gte: timeBounds.election_date__gte,
             election_date__lte: timeBounds.election_date__lte,
+            search: search || undefined,
             page,
           }),
           civicElectionsApi.listElections({
@@ -201,7 +210,7 @@ function HomePage() {
     return () => {
       isActive = false;
     };
-  }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, timeFilter, zip]);
+  }, [address, contestType, effectiveState, electionId, hasIncompleteLocation, page, requestKey, resolvedScope, search, timeFilter, zip]);
 
   const elections = useMemo(() => {
     // For ZIP scope, elections come from the lookup response directly.
@@ -320,27 +329,37 @@ function HomePage() {
           <Typography color="text.secondary">{subheading}</Typography>
         </Box>
 
-        {elections.length > 1 ? (
-          <FormControl sx={{ minWidth: 260 }}>
-            <InputLabel id="election-select-label">Election</InputLabel>
-            <Select
-              label="Election"
-              labelId="election-select-label"
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setElectionId(nextValue ? Number(nextValue) : null);
-              }}
-              value={electionId ? String(electionId) : ''}
-            >
-              <MenuItem value="">All current elections</MenuItem>
-              {elections.map((election) => (
-                <MenuItem key={election.id} value={String(election.id)}>
-                  {election.name} · {election.election_date}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        ) : null}
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}>
+          <TextField
+            label="Search races"
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="e.g. Governor, City Council"
+            sx={{ minWidth: 260 }}
+            value={searchInput}
+          />
+
+          {elections.length > 1 ? (
+            <FormControl sx={{ minWidth: 260 }}>
+              <InputLabel id="election-select-label">Election</InputLabel>
+              <Select
+                label="Election"
+                labelId="election-select-label"
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setElectionId(nextValue ? Number(nextValue) : null);
+                }}
+                value={electionId ? String(electionId) : ''}
+              >
+                <MenuItem value="">All current elections</MenuItem>
+                {elections.map((election) => (
+                  <MenuItem key={election.id} value={String(election.id)}>
+                    {election.name} · {election.election_date}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : null}
+        </Stack>
       </Stack>
 
       {resolvedScope === 'address' ? (
@@ -392,6 +411,18 @@ function HomePage() {
                 </Typography>
               </>
             )}
+          </Stack>
+        </Paper>
+      ) : search && !loading && data !== null && data.count === 0 ? (
+        <Paper sx={{ p: { xs: 3, md: 5 }, textAlign: 'center' }}>
+          <Stack alignItems="center" spacing={2}>
+            <Typography variant="h5">No races match &ldquo;{search}&rdquo;.</Typography>
+            <Typography color="text.secondary" maxWidth={560}>
+              Try a broader term, or clear the search to browse the full list.
+            </Typography>
+            <Button onClick={() => setSearchInput('')} variant="outlined">
+              Clear search
+            </Button>
           </Stack>
         </Paper>
       ) : (
