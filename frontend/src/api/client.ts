@@ -82,10 +82,36 @@ export const getApiFieldErrors = (error: unknown): Record<string, string> => {
   }, {});
 };
 
+const formatRetryWait = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 'in a few minutes';
+  if (seconds < 60) return `in ${Math.ceil(seconds)} second${Math.ceil(seconds) === 1 ? '' : 's'}`;
+  if (seconds < 3600) {
+    const minutes = Math.ceil(seconds / 60);
+    return `in ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  }
+  const hours = Math.round(seconds / 3600);
+  return `in about ${hours} hour${hours === 1 ? '' : 's'}`;
+};
+
+/**
+ * Friendly message for API rate limits (HTTP 429), using the Retry-After header (seconds).
+ * Returns null for any other error.
+ */
+export const getRateLimitMessage = (error: unknown): string | null => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 429) {
+    return null;
+  }
+  const retryAfter = Number(error.response.headers?.['retry-after']);
+  return `Too many attempts. Please try again ${formatRetryWait(retryAfter)}.`;
+};
+
 export const getApiErrorMessage = (error: unknown, fallback = 'Something went wrong.') => {
   if (!axios.isAxiosError(error)) {
     return fallback;
   }
+
+  const rateLimitMessage = getRateLimitMessage(error);
+  if (rateLimitMessage) return rateLimitMessage;
 
   const data = error.response?.data;
   if (typeof data === 'object' && data) {
