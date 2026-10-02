@@ -10,6 +10,9 @@ ARG VITE_CIVIC_API_URL=https://civicmirror-backend-866677508588.us-central1.run.
 ENV VITE_CIVIC_API_URL=$VITE_CIVIC_API_URL
 ARG VITE_CIVIC_API_KEY=
 ENV VITE_CIVIC_API_KEY=$VITE_CIVIC_API_KEY
+# Cloudflare Turnstile site key (public). Blank disables the registration widget.
+ARG VITE_TURNSTILE_SITE_KEY=
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────────────────────
