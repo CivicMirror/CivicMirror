@@ -140,6 +140,7 @@ export interface RegisterPayload {
   gender?: string;
   terms_version: string;
   terms_accepted: true;
+  turnstile_token?: string;
 }
 
 export interface AuthResponse {

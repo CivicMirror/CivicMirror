@@ -18,11 +18,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { getApiErrorMessage, getApiFieldErrors } from '../api/client';
+import TurnstileWidget, { TURNSTILE_SITE_KEY, type TurnstileHandle } from '../components/common/TurnstileWidget';
 import { useAuth } from '../hooks/useAuth';
 import { COUNTRIES } from '../utils/countries';
 import { US_STATES } from '../utils/usStates';
@@ -62,6 +63,9 @@ function RegisterPage() {
   const location = useLocation();
   const { isLoading, register: registerUser } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
+  const turnstileRequired = Boolean(TURNSTILE_SITE_KEY);
 
   const {
     register,
@@ -86,6 +90,10 @@ function RegisterPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
+    if (turnstileRequired && !turnstileToken) {
+      setFormError('Please complete the verification check below.');
+      return;
+    }
 
     try {
       await registerUser({
@@ -97,10 +105,17 @@ function RegisterPage() {
         gender: values.gender?.trim() || undefined,
         terms_version: CURRENT_TERMS_VERSION,
         terms_accepted: true,
+        turnstile_token: turnstileToken ?? undefined,
       });
       navigate(returnTo, { replace: true });
     } catch (error) {
+      // Turnstile tokens are single-use, so get a fresh one before the next attempt.
+      turnstileRef.current?.reset();
       const fieldErrors = getApiFieldErrors(error);
+      if (fieldErrors.turnstile) {
+        setFormError(fieldErrors.turnstile);
+        return;
+      }
       const fieldMap: Record<string, keyof RegisterFormValues> = {
         username: 'username',
         password: 'password',
@@ -259,8 +274,15 @@ function RegisterPage() {
               />
               {errors.termsAccepted ? <Typography color="error.main" variant="body2">{errors.termsAccepted.message}</Typography> : null}
 
+              <TurnstileWidget
+                action="register"
+                onError={() => setFormError('The verification check could not load. Please refresh the page and try again.')}
+                onToken={setTurnstileToken}
+                ref={turnstileRef}
+              />
+
               <Button
-                disabled={isLoading}
+                disabled={isLoading || (turnstileRequired && !turnstileToken)}
                 size="large"
                 startIcon={<PersonAdd />}
                 type="submit"
