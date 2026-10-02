@@ -1,0 +1,9 @@
+# Build from package-lock.json only: never copy host build artifacts into the image.
+# (Without this, `COPY . .` overlaid the host's node_modules on top of `npm ci`, so production
+# silently built against whatever happened to be installed locally.)
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.log
